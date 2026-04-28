@@ -9,7 +9,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       manifest: {
         name: 'My PWA',
-        short_name: 'MyPWA',
+        short_name: "Rally '26",
         description: 'My first progressive web app',
         theme_color: '#ffffff',
         icons: [

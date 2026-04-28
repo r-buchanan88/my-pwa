@@ -102,7 +102,7 @@ export default function App() {
     <div className="app">
       {/* HERO */}
       <div className="hero">
-        <div className="hero-eyebrow">Beach Trip 2025</div>
+        <div className="hero-eyebrow">Beach Trip 2026</div>
         <div className="hero-title">{TRIP.title}</div>
         <div className="hero-dates">{TRIP.dates}</div>
         <a className="hero-address" href={TRIP.mapsUrl} target="_blank" rel="noreferrer">

@@ -322,13 +322,13 @@ function WeatherTab() {
           <div className="sun-moon-item">
             <div className="sun-moon-label">Sunrise</div>
             <div className="sun-moon-value">
-              {forecast?.sunrise?.[0] ? formatTime12(forecast.sunrise[0]) : '--'}
+              {forecast?.daily?.sunrise?.[0] ? formatTime12(forecast.daily.sunrise[0]) : '--'}
             </div>
           </div>
           <div className="sun-moon-item">
             <div className="sun-moon-label">Sunset</div>
             <div className="sun-moon-value">
-              {forecast?.sunset?.[0] ? formatTime12(forecast.sunset[0]) : '--'}
+              {forecast?.daily?.sunset?.[0] ? formatTime12(forecast.daily.sunset[0]) : '--'}
             </div>
           </div>
           <div className="sun-moon-item">
@@ -338,7 +338,7 @@ function WeatherTab() {
           <div className="sun-moon-item">
             <div className="sun-moon-label">Golden Hour</div>
             <div className="sun-moon-value">
-              {forecast?.sunset?.[0] ? formatTime12(new Date(new Date(forecast.sunset[0]).getTime() - 60 * 60 * 1000)) : '--'}
+              {forecast?.daily?.sunset?.[0] ? formatTime12(new Date(new Date(forecast.daily.sunset[0]).getTime() - 60 * 60 * 1000)) : '--'}
             </div>
           </div>
         </div>
@@ -347,14 +347,14 @@ function WeatherTab() {
       {/* 7-DAY FORECAST */}
       <div className="card">
         <div className="card-label">7-Day Forecast</div>
-        {!forecast && <div className="loading">Loading...</div>}
-        {forecast && forecast.time.map((date, i) => (
+       {!forecast && <div className="loading">Loading...</div>}
+        {forecast?.daily && forecast.daily.time.map((date, i) => (
           <div className="forecast-row" key={date}>
             <div className="forecast-day">{i === 0 ? 'Now' : DAYS[new Date(date).getDay()]}</div>
-            <div className="forecast-desc">{WX_LABELS[forecast.weathercode[i]] ?? '—'}</div>
+            <div className="forecast-desc">{WX_LABELS[forecast.daily.weathercode[i]] ?? '—'}</div>
             <div className="forecast-temps">
-              {Math.round(forecast.temperature_2m_max[i])}°
-              <span className="low">{Math.round(forecast.temperature_2m_min[i])}°</span>
+              {Math.round(forecast.daily.temperature_2m_max[i])}°
+              <span className="low">{Math.round(forecast.daily.temperature_2m_min[i])}°</span>
             </div>
           </div>
         ))}

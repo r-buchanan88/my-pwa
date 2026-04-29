@@ -299,3 +299,110 @@ body {
   letter-spacing: 1px;
   text-transform: uppercase;
 }
+/* FORECAST */
+.forecast-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.forecast-row:last-child {
+  border-bottom: none;
+}
+
+.forecast-day {
+  font-family: 'Orbitron', monospace;
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: #ff6ec7;
+  width: 36px;
+}
+
+.forecast-desc {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  flex: 1;
+  padding: 0 8px;
+}
+
+.forecast-temps {
+  font-size: 13px;
+  color: #fff;
+  text-align: right;
+}
+
+.forecast-temps .low {
+  color: rgba(255, 255, 255, 0.4);
+  margin-left: 6px;
+}
+
+/* UV BAR */
+.uv-bar-bg {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.08);
+  overflow: hidden;
+  margin: 10px 0 6px;
+}
+
+.uv-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #00e5ff, #ff6ec7, #ff4444);
+  transition: width 0.5s ease;
+}
+
+/* SUN MOON */
+.sun-moon-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.sun-moon-item {
+  background: rgba(255,255,255,0.05);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.sun-moon-label {
+  font-family: 'Orbitron', monospace;
+  font-size: 8px;
+  letter-spacing: 2px;
+  color: #00e5ff;
+  margin-bottom: 4px;
+}
+
+.sun-moon-value {
+  font-size: 14px;
+  color: #fff;
+}
+
+/* RIP CURRENT */
+.rip-badge {
+  display: inline-block;
+  font-family: 'Orbitron', monospace;
+  font-size: 12px;
+  letter-spacing: 2px;
+  padding: 6px 16px;
+  border-radius: 999px;
+  margin-bottom: 8px;
+}
+
+.rip-low {
+  background: rgba(0, 229, 255, 0.15);
+  color: #00e5ff;
+}
+
+.rip-moderate {
+  background: rgba(255, 200, 0, 0.15);
+  color: #ffc800;
+}
+
+.rip-high {
+  background: rgba(255, 68, 68, 0.15);
+  color: #ff4444;
+}

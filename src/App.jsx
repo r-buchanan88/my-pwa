@@ -4,8 +4,8 @@ import './App.css'
 const TRIP = {
   title: 'Rally Crew',
   dates: 'May 23 – 30, 2026',
-  checkin: new Date('2026-04-27T16:00:00'),
-  checkout: new Date('2026-04-29T10:00:00'),
+  checkin: new Date('2026-05-23T16:00:00'),
+  checkout: new Date('2026-05-30T10:00:00'),
   address: '1113 New River Inlet Rd, North Topsail Beach, NC 28460',
   mapsUrl: 'https://maps.apple.com/?address=1113+New+River+Inlet+Rd,+North+Topsail+Beach,+NC+28460',
   activities: [
@@ -163,17 +163,101 @@ function HomeTab() {
   )
 }
 
+function useForecast() {
+  const [data, setData] = useState(null)
+  const [error, setError] = useState(false)
+  useEffect(() => {
+    const fetch_ = () =>
+      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&daily=weathercode,temperature_2m_max,temperature_2m_min,uv_index_max,sunrise,sunset&temperature_unit=fahrenheit&timezone=America/New_York`)
+        .then(r => r.json()).then(d => setData(d.daily)).catch(() => setError(true))
+    fetch_()
+    const id = setInterval(fetch_, 5 * 60 * 1000)
+    return () => clearInterval(id)
+  }, [])
+  return { data, error }
+}
+
+function useMoonPhase() {
+  const [data, setData] = useState(null)
+  useEffect(() => {
+    const today = new Date().toISOString().split('T')[0]
+    fetch(`https://api.sunrise-sunset.org/json?lat=${LAT}&lng=${LON}&date=${today}&formatted=0`)
+      .then(r => r.json()).then(d => setData(d.results)).catch(() => {})
+  }, [])
+  return data
+}
+
+function useRipCurrent() {
+  const [data, setData] = useState(null)
+  useEffect(() => {
+    fetch('https://tgftp.nws.noaa.gov/data/raw/fz/fzus52.kmhx.srf.mhx.txt')
+      .then(r => r.text())
+      .then(text => {
+        const onslow = text.split('NCZ199')[1] || ''
+        const match = onslow.match(/Rip Current Risk[.*\n]*?([A-Za-z]+)\./m) ||
+                      onslow.match(/Rip Current Risk\*+\.+([A-Za-z]+)/)
+        if (match) setData(match[1].trim())
+        else {
+          const simple = onslow.match(/Rip Current Risk[^a-zA-Z]*([A-Za-z]+)/)
+          if (simple) setData(simple[1].trim())
+        }
+      }).catch(() => {})
+  }, [])
+  return data
+}
+
+const UV_LABELS = ['Low','Low','Low','Moderate','Moderate','Moderate','High','High','Very High','Very High','Extreme']
+
+function formatTime12(isoString) {
+  if (!isoString) return '--'
+  const d = new Date(isoString)
+  let h = d.getHours(), m = d.getMinutes()
+  const ampm = h >= 12 ? 'PM' : 'AM'
+  h = h % 12 || 12
+  return `${h}:${String(m).padStart(2,'0')} ${ampm}`
+}
+
+const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
+
+const MOON_PHASES = [
+  '🌑','🌒','🌒','🌒','🌓','🌔','🌔','🌔',
+  '🌕','🌖','🌖','🌖','🌗','🌘','🌘','🌘','🌑'
+]
+
+function getMoonEmoji() {
+  const known = new Date('2026-01-01')
+  const cycle = 29.53
+  const diff = (new Date() - known) / (1000 * 60 * 60 * 24)
+  const phase = ((diff % cycle) + cycle) % cycle
+  return MOON_PHASES[Math.floor(phase / cycle * MOON_PHASES.length)]
+}
+
 function WeatherTab() {
   const weather = useWeather()
   const marine = useMarine()
   const { tides, error: tideError } = useNoaaTides()
+  const { data: forecast } = useForecast()
+  const sunMoon = useMoonPhase()
+  const ripRisk = useRipCurrent()
+
+  const uvIndex = forecast?.uv_index_max?.[0]
+  const uvLabel = uvIndex != null ? (UV_LABELS[Math.min(Math.floor(uvIndex), 10)] ?? 'Extreme') : null
+  const uvPct = uvIndex != null ? Math.min(100, (uvIndex / 11) * 100) : 0
+
+  const ripClass = ripRisk
+    ? ripRisk.toLowerCase().includes('high') ? 'rip-high'
+    : ripRisk.toLowerCase().includes('moderate') ? 'rip-moderate'
+    : 'rip-low'
+    : 'rip-low'
 
   return (
     <div className="cards" style={{ paddingTop: 24 }}>
+
+      {/* CURRENT CONDITIONS */}
       <div className="card">
-        <div className="card-label">Current Weather</div>
-        {weather.error && <div className="error">Unable to load weather</div>}
+        <div className="card-label">Current Conditions</div>
         {!weather.data && !weather.error && <div className="loading">Loading...</div>}
+        {weather.error && <div className="error">Unable to load weather</div>}
         {weather.data && (
           <>
             <div className="card-main">{Math.round(weather.data.temperature_2m)}°F</div>
@@ -194,6 +278,76 @@ function WeatherTab() {
         )}
       </div>
 
+      {/* UV INDEX */}
+      {uvIndex != null && (
+        <div className="card">
+          <div className="card-label">UV Index</div>
+          <div className="card-main" style={{ fontSize: 28 }}>{uvIndex.toFixed(1)} <span style={{ fontSize: 16, color: '#ff6ec7' }}>{uvLabel}</span></div>
+          <div className="uv-bar-bg">
+            <div className="uv-bar-fill" style={{ width: `${uvPct}%` }} />
+          </div>
+          <div className="card-detail">Scale 0–11+. Reapply SPF every 2 hrs.</div>
+        </div>
+      )}
+
+      {/* RIP CURRENT */}
+      <div className="card">
+        <div className="card-label">Rip Current Risk · Coastal Onslow</div>
+        {!ripRisk && <div className="loading">Loading...</div>}
+        {ripRisk && (
+          <>
+            <div className={`rip-badge ${ripClass}`}>{ripRisk}</div>
+            <div className="card-detail">Source: NOAA NWS Newport/Morehead City</div>
+          </>
+        )}
+      </div>
+
+      {/* SUNRISE / SUNSET / MOON */}
+      <div className="card">
+        <div className="card-label">Sun & Moon</div>
+        <div className="sun-moon-grid">
+          <div className="sun-moon-item">
+            <div className="sun-moon-label">Sunrise</div>
+            <div className="sun-moon-value">
+              {forecast?.sunrise?.[0] ? formatTime12(forecast.sunrise[0]) : '--'}
+            </div>
+          </div>
+          <div className="sun-moon-item">
+            <div className="sun-moon-label">Sunset</div>
+            <div className="sun-moon-value">
+              {forecast?.sunset?.[0] ? formatTime12(forecast.sunset[0]) : '--'}
+            </div>
+          </div>
+          <div className="sun-moon-item">
+            <div className="sun-moon-label">Moon Phase</div>
+            <div className="sun-moon-value">{getMoonEmoji()}</div>
+          </div>
+          <div className="sun-moon-item">
+            <div className="sun-moon-label">Golden Hour</div>
+            <div className="sun-moon-value">
+              {forecast?.sunset?.[0] ? formatTime12(new Date(new Date(forecast.sunset[0]).getTime() - 60 * 60 * 1000)) : '--'}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 7-DAY FORECAST */}
+      <div className="card">
+        <div className="card-label">7-Day Forecast</div>
+        {!forecast && <div className="loading">Loading...</div>}
+        {forecast && forecast.time.map((date, i) => (
+          <div className="forecast-row" key={date}>
+            <div className="forecast-day">{i === 0 ? 'Now' : DAYS[new Date(date).getDay()]}</div>
+            <div className="forecast-desc">{WX_LABELS[forecast.weathercode[i]] ?? '—'}</div>
+            <div className="forecast-temps">
+              {Math.round(forecast.temperature_2m_max[i])}°
+              <span className="low">{Math.round(forecast.temperature_2m_min[i])}°</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* TIDES */}
       <div className="card">
         <div className="card-label">Today's Tides · Wilmington Station</div>
         {tideError && <div className="error">Unable to load tide data</div>}
@@ -208,6 +362,7 @@ function WeatherTab() {
           </div>
         ))}
       </div>
+
     </div>
   )
 }

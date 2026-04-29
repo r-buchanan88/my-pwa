@@ -4,7 +4,7 @@ import './App.css'
 const TRIP = {
   title: 'Rally Crew',
   dates: 'May 23 – 30, 2026',
-  checkin: new Date('2026-05-23T16:00:00'),
+  checkin: new Date('2026-04-27T16:00:00'),
   checkout: new Date('2026-05-30T10:00:00'),
   address: '1113 New River Inlet Rd, North Topsail Beach, NC 28460',
   mapsUrl: 'https://maps.apple.com/?address=1113+New+River+Inlet+Rd,+North+Topsail+Beach,+NC+28460',

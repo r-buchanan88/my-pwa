@@ -175,7 +175,7 @@ function useForecast() {
   useEffect(() => {
     const fetch_ = () =>
       fetch(`https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&daily=weathercode,temperature_2m_max,temperature_2m_min,sunrise,sunset&hourly=uv_index&temperature_unit=fahrenheit&timezone=America/New_York`)
-      .then(r => r.json()).then(d => setData(d)).catch(() => setError(true))
+        .then(r => r.json()).then(d => setData(d)).catch(() => setError(true))
     fetch_()
     const id = setInterval(fetch_, 5 * 60 * 1000)
     return () => clearInterval(id)
@@ -196,29 +196,21 @@ function useMoonPhase() {
 function useRipCurrent() {
   const [data, setData] = useState(null)
   useEffect(() => {
-    fetch(`https://api.weather.gov/zones/forecast/NCZ199`, {
-      headers: { 'Accept': 'application/geo+json' }
+    fetch(`https://api.weather.gov/products?type=SRF&location=MHX`, {
+      headers: { 'Accept': 'application/ld+json' }
     })
       .then(r => r.json())
-      .then(() => {
-        fetch(`https://api.weather.gov/products?type=SRF&location=MHX`, {
-          headers: { 'Accept': 'application/ld+json' }
-        })
-          .then(r => r.json())
-          .then(d => {
-            const latest = d['@graph']?.[0]
-            if (!latest) return
-            return fetch(latest['@id'], { headers: { 'Accept': 'application/ld+json' } })
-          })
-          .then(r => r?.json())
-          .then(d => {
-            if (!d?.productText) return
-            const text = d.productText
-            const onslow = text.split('NCZ199')[1] || ''
-            const match = onslow.match(/Rip Current Risk[^a-zA-Z]*([A-Za-z]+)/)
-            if (match) setData(match[1].trim())
-          })
-          .catch(() => {})
+      .then(d => {
+        const latest = d['@graph']?.[0]
+        if (!latest) return
+        return fetch(latest['@id'], { headers: { 'Accept': 'application/ld+json' } })
+      })
+      .then(r => r?.json())
+      .then(d => {
+        if (!d?.productText) return
+        const onslow = d.productText.split('NCZ199')[1] || ''
+        const match = onslow.match(/Rip Current Risk[^a-zA-Z]*([A-Za-z]+)/)
+        if (match) setData(match[1].trim())
       })
       .catch(() => {})
   }, [])
@@ -393,11 +385,12 @@ function WeatherTab() {
                 </span>
                 <span className="tide-time">{formatTideTime(t.t)}</span>
                 <span className="tide-height">{parseFloat(t.v).toFixed(1)} ft</span>
-              </div>
+</div>
             ))}
           </>
         )}
       </div>
+    </div>
   )
 }
 

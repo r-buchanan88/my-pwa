@@ -105,6 +105,7 @@ function HomeTab() {
 
   const daysLeft = Math.floor(msToCheckin / (1000 * 60 * 60 * 24))
   const hoursLeft = Math.floor((msToCheckin % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+  const minutesLeft = Math.floor((msToCheckin % (1000 * 60 * 60)) / (1000 * 60))
 
   return (
     <div>
@@ -124,7 +125,7 @@ function HomeTab() {
             {ended ? 'Trip Complete' : started ? 'Trip Progress' : 'Countdown to Check-In'}
           </div>
           {!started && (
-            <div className="card-main">{daysLeft}d {hoursLeft}h</div>
+            <div className="card-main">{daysLeft}d {hoursLeft}h {minutesLeft}m</div>
           )}
           {!started && <div className="card-sub">until check-in</div>}
           {started && !ended && (

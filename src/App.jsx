@@ -58,10 +58,16 @@ function useNoaaTides() {
   useEffect(() => {
     const fetch_ = () => {
       const today = new Date()
+      const tomorrow = new Date(today)
+      tomorrow.setDate(tomorrow.getDate() + 1)
       const pad = n => String(n).padStart(2, '0')
-      const dateStr = `${today.getFullYear()}${pad(today.getMonth() + 1)}${pad(today.getDate())}`
-      fetch(`https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?begin_date=${dateStr}&range=24&station=${NOAA_STATION}&product=predictions&datum=MLLW&time_zone=lst_ldt&interval=hilo&units=english&application=web_services&format=json`)
-        .then(r => r.json()).then(d => { if (d.predictions) setTides(d.predictions); else setError(true) })
+      const fmt = d => `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`
+      const fetchDay = (date) =>
+        fetch(`https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?begin_date=${fmt(date)}&range=24&station=${NOAA_STATION}&product=predictions&datum=MLLW&time_zone=lst_ldt&interval=hilo&units=english&application=web_services&format=json`)
+          .then(r => r.json())
+          .then(d => d.predictions || [])
+      Promise.all([fetchDay(today), fetchDay(tomorrow)])
+        .then(([todayTides, tomorrowTides]) => setTides({ today: todayTides, tomorrow: tomorrowTides }))
         .catch(() => setError(true))
     }
     fetch_()
@@ -168,8 +174,8 @@ function useForecast() {
   const [error, setError] = useState(false)
   useEffect(() => {
     const fetch_ = () =>
-      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&daily=weathercode,temperature_2m_max,temperature_2m_min,uv_index_max,sunrise,sunset&temperature_unit=fahrenheit&timezone=America/New_York`)
-        .then(r => r.json()).then(d => setData(d.daily)).catch(() => setError(true))
+      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&daily=weathercode,temperature_2m_max,temperature_2m_min,sunrise,sunset&hourly=uv_index&temperature_unit=fahrenheit&timezone=America/New_York`)
+      .then(r => r.json()).then(d => setData(d)).catch(() => setError(true))
     fetch_()
     const id = setInterval(fetch_, 5 * 60 * 1000)
     return () => clearInterval(id)
@@ -190,18 +196,31 @@ function useMoonPhase() {
 function useRipCurrent() {
   const [data, setData] = useState(null)
   useEffect(() => {
-    fetch('https://tgftp.nws.noaa.gov/data/raw/fz/fzus52.kmhx.srf.mhx.txt')
-      .then(r => r.text())
-      .then(text => {
-        const onslow = text.split('NCZ199')[1] || ''
-        const match = onslow.match(/Rip Current Risk[.*\n]*?([A-Za-z]+)\./m) ||
-                      onslow.match(/Rip Current Risk\*+\.+([A-Za-z]+)/)
-        if (match) setData(match[1].trim())
-        else {
-          const simple = onslow.match(/Rip Current Risk[^a-zA-Z]*([A-Za-z]+)/)
-          if (simple) setData(simple[1].trim())
-        }
-      }).catch(() => {})
+    fetch(`https://api.weather.gov/zones/forecast/NCZ199`, {
+      headers: { 'Accept': 'application/geo+json' }
+    })
+      .then(r => r.json())
+      .then(() => {
+        fetch(`https://api.weather.gov/products?type=SRF&location=MHX`, {
+          headers: { 'Accept': 'application/ld+json' }
+        })
+          .then(r => r.json())
+          .then(d => {
+            const latest = d['@graph']?.[0]
+            if (!latest) return
+            return fetch(latest['@id'], { headers: { 'Accept': 'application/ld+json' } })
+          })
+          .then(r => r?.json())
+          .then(d => {
+            if (!d?.productText) return
+            const text = d.productText
+            const onslow = text.split('NCZ199')[1] || ''
+            const match = onslow.match(/Rip Current Risk[^a-zA-Z]*([A-Za-z]+)/)
+            if (match) setData(match[1].trim())
+          })
+          .catch(() => {})
+      })
+      .catch(() => {})
   }, [])
   return data
 }
@@ -240,7 +259,9 @@ function WeatherTab() {
   const sunMoon = useMoonPhase()
   const ripRisk = useRipCurrent()
 
-  const uvIndex = forecast?.uv_index_max?.[0]
+  const now = new Date()
+  const currentHour = now.getHours()
+  const uvIndex = forecast?.hourly?.uv_index?.[currentHour]
   const uvLabel = uvIndex != null ? (UV_LABELS[Math.min(Math.floor(uvIndex), 10)] ?? 'Extreme') : null
   const uvPct = uvIndex != null ? Math.min(100, (uvIndex / 11) * 100) : 0
 
@@ -349,21 +370,34 @@ function WeatherTab() {
 
       {/* TIDES */}
       <div className="card">
-        <div className="card-label">Today's Tides · Wilmington Station</div>
+        <div className="card-label">Tides · Wilmington Station</div>
         {tideError && <div className="error">Unable to load tide data</div>}
         {!tides && !tideError && <div className="loading">Loading...</div>}
-        {tides && tides.map((t, i) => (
-          <div className="tide-row" key={i}>
-            <span className={`tide-type ${t.type === 'H' ? 'high' : 'low'}`}>
-              {t.type === 'H' ? 'High' : 'Low'}
-            </span>
-            <span className="tide-time">{formatTideTime(t.t)}</span>
-            <span className="tide-height">{parseFloat(t.v).toFixed(1)} ft</span>
-          </div>
-        ))}
+        {tides && (
+          <>
+            <div style={{ marginBottom: 8, fontFamily: 'Orbitron, monospace', fontSize: 9, letterSpacing: 2, color: '#ff6ec7' }}>TODAY</div>
+            {tides.today.map((t, i) => (
+              <div className="tide-row" key={i}>
+                <span className={`tide-type ${t.type === 'H' ? 'high' : 'low'}`}>
+                  {t.type === 'H' ? 'High' : 'Low'}
+                </span>
+                <span className="tide-time">{formatTideTime(t.t)}</span>
+                <span className="tide-height">{parseFloat(t.v).toFixed(1)} ft</span>
+              </div>
+            ))}
+            <div style={{ margin: '12px 0 8px', fontFamily: 'Orbitron, monospace', fontSize: 9, letterSpacing: 2, color: '#ff6ec7' }}>TOMORROW</div>
+            {tides.tomorrow.map((t, i) => (
+              <div className="tide-row" key={i}>
+                <span className={`tide-type ${t.type === 'H' ? 'high' : 'low'}`}>
+                  {t.type === 'H' ? 'High' : 'Low'}
+                </span>
+                <span className="tide-time">{formatTideTime(t.t)}</span>
+                <span className="tide-height">{parseFloat(t.v).toFixed(1)} ft</span>
+              </div>
+            ))}
+          </>
+        )}
       </div>
-
-    </div>
   )
 }
 

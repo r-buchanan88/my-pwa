@@ -543,12 +543,201 @@ function ExploreTab() {
 }
 
 function GamesTab() {
+  const [teams, setTeams] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('kubb-teams') || '[]') } catch { return [] }
+  })
+  const [matches, setMatches] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('kubb-matches') || '[]') } catch { return [] }
+  })
+  const [newTeam, setNewTeam] = useState('')
+  const [winner, setWinner] = useState('')
+  const [loser, setLoser] = useState('')
+  const [confirmClear, setConfirmClear] = useState(false)
+
+  const saveTeams = (updated) => {
+    setTeams(updated)
+    try { localStorage.setItem('kubb-teams', JSON.stringify(updated)) } catch {}
+  }
+
+  const saveMatches = (updated) => {
+    setMatches(updated)
+    try { localStorage.setItem('kubb-matches', JSON.stringify(updated)) } catch {}
+  }
+
+  const addTeam = () => {
+    const trimmed = newTeam.trim()
+    if (!trimmed || teams.includes(trimmed)) return
+    saveTeams([...teams, trimmed])
+    setNewTeam('')
+  }
+
+  const removeTeam = (t) => {
+    saveTeams(teams.filter(x => x !== t))
+  }
+
+  const logMatch = () => {
+    if (!winner || !loser || winner === loser) return
+    const match = {
+      winner,
+      loser,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      date: new Date().toLocaleDateString([], { month: 'short', day: 'numeric' }),
+    }
+    saveMatches([match, ...matches])
+    setWinner('')
+    setLoser('')
+  }
+
+  const clearAll = () => {
+    saveTeams([])
+    saveMatches([])
+    setConfirmClear(false)
+  }
+
+  // Build leaderboard
+  const standings = teams.map(team => {
+    const wins = matches.filter(m => m.winner === team).length
+    const losses = matches.filter(m => m.loser === team).length
+    return { team, wins, losses }
+  }).sort((a, b) => b.wins - a.wins || a.losses - b.losses)
+
+  const inputStyle = {
+    flex: 1, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,110,199,0.3)',
+    borderRadius: 10, padding: '8px 12px', color: '#fff', fontSize: 13,
+    outline: 'none', fontFamily: 'Exo 2, sans-serif'
+  }
+
+  const btnStyle = {
+    background: 'linear-gradient(135deg, #ff6ec7, #00e5ff)', border: 'none',
+    borderRadius: 10, padding: '8px 14px', color: '#0a0015',
+    fontWeight: 700, fontSize: 16, cursor: 'pointer'
+  }
+
+  const selectStyle = {
+    ...inputStyle, flex: 1, cursor: 'pointer'
+  }
+
   return (
     <div className="cards" style={{ paddingTop: 24 }}>
+
+      {/* TEAM SETUP */}
       <div className="card">
-        <div className="card-label">Games</div>
-        <div className="card-sub">Coming soon — Kubb scoreboard</div>
+        <div className="card-label">⚔️ Teams</div>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+          <input
+            value={newTeam}
+            onChange={e => setNewTeam(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && addTeam()}
+            placeholder="Team name..."
+            style={inputStyle}
+          />
+          <button onClick={addTeam} style={btnStyle}>+</button>
+        </div>
+        {teams.length === 0 && <div className="card-sub">No teams yet — add some above</div>}
+        {teams.map((t, i) => (
+          <div key={i} className="activity-item" style={{ justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div className="activity-dot" />
+              <div style={{ fontSize: 14, color: '#ffd6f0' }}>{t}</div>
+            </div>
+            <button onClick={() => removeTeam(t)} style={{
+              background: 'none', border: 'none', color: 'rgba(255,110,199,0.4)',
+              fontSize: 16, cursor: 'pointer', padding: '0 4px'
+            }}>✕</button>
+          </div>
+        ))}
       </div>
+
+      {/* LOG A MATCH */}
+      {teams.length >= 2 && (
+        <div className="card">
+          <div className="card-label">🏆 Log a Match</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <span style={{ fontSize: 12, color: '#00e5ff', width: 44, fontFamily: 'Orbitron, monospace', fontSize: 9, letterSpacing: 1 }}>WINNER</span>
+              <select value={winner} onChange={e => setWinner(e.target.value)} style={selectStyle}>
+                <option value="">Select...</option>
+                {teams.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <span style={{ fontSize: 12, color: '#ff6ec7', width: 44, fontFamily: 'Orbitron, monospace', fontSize: 9, letterSpacing: 1 }}>LOSER</span>
+              <select value={loser} onChange={e => setLoser(e.target.value)} style={selectStyle}>
+                <option value="">Select...</option>
+                {teams.filter(t => t !== winner).map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+            <button
+              onClick={logMatch}
+              disabled={!winner || !loser}
+              style={{
+                ...btnStyle,
+                opacity: (!winner || !loser) ? 0.4 : 1,
+                marginTop: 4, padding: '10px',
+                fontSize: 13, letterSpacing: 1,
+                fontFamily: 'Orbitron, monospace'
+              }}
+            >
+              LOG MATCH
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* LEADERBOARD */}
+      {standings.length > 0 && (
+        <div className="card">
+          <div className="card-label">📊 Leaderboard</div>
+          {standings.map((s, i) => (
+            <div key={s.team} className="tide-row">
+              <span style={{
+                fontFamily: 'Orbitron, monospace', fontSize: 10,
+                color: i === 0 ? '#ffc800' : i === 1 ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.3)',
+                width: 20
+              }}>#{i + 1}</span>
+              <span style={{ flex: 1, fontSize: 14, color: i === 0 ? '#fff' : 'rgba(255,255,255,0.7)' }}>{s.team}</span>
+              <span style={{ fontSize: 13 }}>
+                <span style={{ color: '#00e5ff' }}>{s.wins}W</span>
+                <span style={{ color: 'rgba(255,255,255,0.3)', margin: '0 4px' }}>·</span>
+                <span style={{ color: '#ff6ec7' }}>{s.losses}L</span>
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* MATCH HISTORY */}
+      {matches.length > 0 && (
+        <div className="card">
+          <div className="card-label">📜 Match History</div>
+          {matches.map((m, i) => (
+            <div key={i} className="tide-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                <span style={{ fontSize: 13, color: '#fff' }}>
+                  <span style={{ color: '#00e5ff' }}>{m.winner}</span>
+                  <span style={{ color: 'rgba(255,255,255,0.3)', margin: '0 6px' }}>def.</span>
+                  <span style={{ color: '#ff6ec7' }}>{m.loser}</span>
+                </span>
+                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>{m.date} {m.time}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* CLEAR DATA */}
+      {(teams.length > 0 || matches.length > 0) && (
+        <div style={{ textAlign: 'center', paddingBottom: 8 }}>
+          {!confirmClear
+            ? <button onClick={() => setConfirmClear(true)} style={{ background: 'none', border: 'none', color: 'rgba(255,110,199,0.3)', fontSize: 11, cursor: 'pointer', fontFamily: 'Orbitron, monospace', letterSpacing: 1 }}>RESET ALL DATA</button>
+            : <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+                <button onClick={clearAll} style={{ ...btnStyle, background: '#ff4444', fontSize: 11, padding: '6px 12px' }}>CONFIRM RESET</button>
+                <button onClick={() => setConfirmClear(false)} style={{ ...btnStyle, background: 'rgba(255,255,255,0.1)', fontSize: 11, padding: '6px 12px' }}>CANCEL</button>
+              </div>
+          }
+        </div>
+      )}
+
     </div>
   )
 }
@@ -560,7 +749,7 @@ const TABS = [
   { id: 'weather', label: 'Weather', icon: '🌤' },
   { id: 'crew',    label: 'Crew',    icon: '🤙' },
   { id: 'explore', label: 'Explore', icon: '🗺' },
-  { id: 'games',   label: 'Games',   icon: '🏆' },
+  { id: 'games',   label: 'Kubb',   icon: '🏆' },
 ]
 
 export default function App() {

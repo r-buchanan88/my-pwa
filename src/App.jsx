@@ -405,13 +405,139 @@ function CrewTab() {
   )
 }
 
+const RESTAURANTS = [
+  { name: 'Splash by the Sea', type: 'Seafood & American', area: 'On Island', rating: 4.5, phone: '910-328-3044', maps: 'https://maps.apple.com/?q=Splash+by+the+Sea+North+Topsail+Beach+NC' },
+  { name: 'Seaview Pier Restaurant', type: 'Seafood', area: 'On Island', rating: 4.4, phone: '910-328-3172', maps: 'https://maps.apple.com/?q=Seaview+Pier+Restaurant+North+Topsail+Beach+NC' },
+  { name: 'Aarrr Pirate Bar & Grill', type: 'Bar & Grill', area: 'On Island', rating: 4.3, phone: '910-541-0619', maps: 'https://maps.apple.com/?q=Aarrr+Pirate+Bar+Grill+North+Topsail+Beach+NC' },
+  { name: 'Tiki Bar at North End Market', type: 'Bar', area: 'On Island', rating: 4.5, phone: null, maps: 'https://maps.apple.com/?q=Tiki+Bar+North+End+Market+North+Topsail+Beach+NC' },
+  { name: 'Riverview Cafe', type: 'Seafood', area: 'Sneads Ferry', rating: 4.6, phone: '910-327-2011', maps: 'https://maps.apple.com/?q=Riverview+Cafe+Sneads+Ferry+NC' },
+  { name: 'Spiaggia Ristobar', type: 'Italian', area: 'Sneads Ferry', rating: 4.6, phone: '910-741-0179', maps: 'https://maps.apple.com/?q=Spiaggia+Ristobar+Sneads+Ferry+NC' },
+  { name: 'Lo-re-Lei Pub & Grill', type: 'Bar & Grill', area: 'Sneads Ferry', rating: 4.4, phone: '910-327-0900', maps: 'https://maps.apple.com/?q=Lo-re-Lei+Pub+Grill+Sneads+Ferry+NC' },
+  { name: 'Voodoo Brewing Co', type: 'Brewery', area: 'Sneads Ferry', rating: 4.5, phone: '910-741-0155', maps: 'https://maps.apple.com/?q=Voodoo+Brewing+Sneads+Ferry+NC' },
+  { name: 'Low Tide Steakhouse & SandBar', type: 'Steak & Seafood', area: 'Surf City', rating: 4.5, phone: '910-803-2304', maps: 'https://maps.apple.com/?q=Low+Tide+Steakhouse+Surf+City+NC' },
+  { name: "Daddy Mac's Beach Grille", type: 'Seafood & American', area: 'Surf City', rating: 4.3, phone: '910-328-5577', maps: 'https://maps.apple.com/?q=Daddy+Macs+Beach+Grille+Surf+City+NC' },
+  { name: 'Sears Landing', type: 'Seafood', area: 'Surf City', rating: 4.3, phone: '910-328-1312', maps: 'https://maps.apple.com/?q=Sears+Landing+Surf+City+NC' },
+  { name: 'Wildfire Pizza', type: 'Pizza', area: 'Surf City', rating: 4.2, phone: '910-541-0232', maps: 'https://maps.apple.com/?q=Wildfire+Pizza+Surf+City+NC' },
+]
+
+const STORES = [
+  { name: 'Food Lion', type: 'Grocery', address: '965 Old Folkstone Rd, Sneads Ferry', phone: null, maps: 'https://maps.apple.com/?address=965+Old+Folkstone+Rd,+Sneads+Ferry,+NC+28460' },
+  { name: 'ABC Store', type: 'Liquor', address: '987 NC-210, Sneads Ferry', phone: null, maps: 'https://maps.apple.com/?address=987+NC-210,+Sneads+Ferry,+NC+28460' },
+  { name: 'Publix', type: 'Grocery', address: '2765 NC-210, Hampstead', phone: null, maps: 'https://maps.apple.com/?address=2765+NC-210,+Hampstead,+NC+28443' },
+]
+
+const AREAS = ['On Island', 'Sneads Ferry', 'Surf City']
+
 function ExploreTab() {
+  const [needs, setNeeds] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('house-needs') || '[]') } catch { return [] }
+  })
+  const [newNeed, setNewNeed] = useState('')
+
+  const saveNeeds = (updated) => {
+    setNeeds(updated)
+    try { localStorage.setItem('house-needs', JSON.stringify(updated)) } catch {}
+  }
+
+  const addNeed = () => {
+    const trimmed = newNeed.trim()
+    if (!trimmed) return
+    saveNeeds([...needs, { text: trimmed, done: false }])
+    setNewNeed('')
+  }
+
+  const toggleNeed = (i) => {
+    const updated = needs.map((n, idx) => idx === i ? { ...n, done: !n.done } : n)
+    saveNeeds(updated)
+  }
+
+  const removeNeed = (i) => {
+    saveNeeds(needs.filter((_, idx) => idx !== i))
+  }
+
   return (
     <div className="cards" style={{ paddingTop: 24 }}>
+
+      {/* RESTAURANTS */}
+      {AREAS.map(area => (
+        <div className="card" key={area}>
+          <div className="card-label">🍽 {area}</div>
+          {RESTAURANTS.filter(r => r.area === area).map((r, i) => (
+            <div key={i} style={{ paddingBottom: 12, marginBottom: 12, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <div style={{ fontSize: 14, color: '#fff', fontWeight: 600, marginBottom: 2 }}>{r.name}</div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{r.type}</div>
+                </div>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <span style={{ fontSize: 11, color: '#ff6ec7' }}>⭐ {r.rating}</span>
+                  <a href={r.maps} target="_blank" rel="noreferrer" style={{ fontSize: 16, textDecoration: 'none' }}>📍</a>
+                  {r.phone && <a href={`tel:${r.phone}`} style={{ fontSize: 16, textDecoration: 'none' }}>📞</a>}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ))}
+
+      {/* STORES */}
       <div className="card">
-        <div className="card-label">Explore</div>
-        <div className="card-sub">Coming soon — restaurants & stores</div>
+        <div className="card-label">🛒 Stores</div>
+        {STORES.map((s, i) => (
+          <div key={i} style={{ paddingBottom: 12, marginBottom: 12, borderBottom: i < STORES.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <div style={{ fontSize: 14, color: '#fff', fontWeight: 600, marginBottom: 2 }}>{s.name}</div>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{s.type} · {s.address}</div>
+              </div>
+              <a href={s.maps} target="_blank" rel="noreferrer" style={{ fontSize: 16, textDecoration: 'none' }}>📍</a>
+            </div>
+          </div>
+        ))}
       </div>
+
+      {/* HOUSE NEEDS */}
+      <div className="card">
+        <div className="card-label">🏠 House Needs</div>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+          <input
+            value={newNeed}
+            onChange={e => setNewNeed(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && addNeed()}
+            placeholder="Add item..."
+            style={{
+              flex: 1, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,110,199,0.3)',
+              borderRadius: 10, padding: '8px 12px', color: '#fff', fontSize: 13,
+              outline: 'none', fontFamily: 'Exo 2, sans-serif'
+            }}
+          />
+          <button onClick={addNeed} style={{
+            background: 'linear-gradient(135deg, #ff6ec7, #00e5ff)', border: 'none',
+            borderRadius: 10, padding: '8px 14px', color: '#0a0015',
+            fontWeight: 700, fontSize: 18, cursor: 'pointer'
+          }}>+</button>
+        </div>
+        {needs.length === 0 && <div className="card-sub">No items yet</div>}
+        {needs.map((n, i) => (
+          <div key={i} className="activity-item" style={{ justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1 }} onClick={() => toggleNeed(i)}>
+              <div style={{
+                width: 18, height: 18, borderRadius: 4, border: '2px solid rgba(255,110,199,0.5)',
+                background: n.done ? 'linear-gradient(135deg, #ff6ec7, #00e5ff)' : 'transparent',
+                flexShrink: 0, cursor: 'pointer'
+              }} />
+              <div style={{ fontSize: 14, color: n.done ? 'rgba(255,255,255,0.35)' : '#ffd6f0', textDecoration: n.done ? 'line-through' : 'none', cursor: 'pointer' }}>
+                {n.text}
+              </div>
+            </div>
+            <button onClick={() => removeNeed(i)} style={{
+              background: 'none', border: 'none', color: 'rgba(255,110,199,0.4)',
+              fontSize: 16, cursor: 'pointer', padding: '0 4px'
+            }}>✕</button>
+          </div>
+        ))}
+      </div>
+
     </div>
   )
 }

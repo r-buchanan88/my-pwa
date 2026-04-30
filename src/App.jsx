@@ -111,30 +111,31 @@ function formatTideTime(timeStr) {
 
 // --- TABS ---
 function HouseNeeds() {
-  const [needs, setNeeds] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('house-needs') || '[]') } catch { return [] }
-  })
+  const [needs, setNeeds] = useState([])
   const [newNeed, setNewNeed] = useState('')
 
-  const saveNeeds = (updated) => {
-    setNeeds(updated)
-    try { localStorage.setItem('house-needs', JSON.stringify(updated)) } catch {}
-  }
+  useEffect(() => {
+    const needsRef = ref(db, 'house-needs')
+    const unsub = onValue(needsRef, snap => {
+      const val = snap.val()
+      setNeeds(val ? Object.entries(val).map(([key, data]) => ({ key, ...data })) : [])
+    })
+    return () => unsub()
+  }, [])
 
   const addNeed = () => {
     const trimmed = newNeed.trim()
     if (!trimmed) return
-    saveNeeds([...needs, { text: trimmed, done: false }])
+    push(ref(db, 'house-needs'), { text: trimmed, done: false })
     setNewNeed('')
   }
 
-  const toggleNeed = (i) => {
-    const updated = needs.map((n, idx) => idx === i ? { ...n, done: !n.done } : n)
-    saveNeeds(updated)
+  const toggleNeed = (key, done) => {
+    set(ref(db, `house-needs/${key}/done`), !done)
   }
 
-  const removeNeed = (i) => {
-    saveNeeds(needs.filter((_, idx) => idx !== i))
+  const removeNeed = (key) => {
+    remove(ref(db, `house-needs/${key}`))
   }
 
   return (
@@ -159,9 +160,9 @@ function HouseNeeds() {
         }}>+</button>
       </div>
       {needs.length === 0 && <div className="card-sub">No items yet</div>}
-      {needs.map((n, i) => (
-        <div key={i} className="activity-item" style={{ justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1 }} onClick={() => toggleNeed(i)}>
+      {needs.map((n) => (
+        <div key={n.key} className="activity-item" style={{ justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1 }} onClick={() => toggleNeed(n.key, n.done)}>
             <div style={{
               width: 18, height: 18, borderRadius: 4, border: '2px solid rgba(255,110,199,0.5)',
               background: n.done ? 'linear-gradient(135deg, #ff6ec7, #00e5ff)' : 'transparent',
@@ -171,7 +172,7 @@ function HouseNeeds() {
               {n.text}
             </div>
           </div>
-          <button onClick={() => removeNeed(i)} style={{
+          <button onClick={() => removeNeed(n.key)} style={{
             background: 'none', border: 'none', color: 'rgba(255,110,199,0.4)',
             fontSize: 16, cursor: 'pointer', padding: '0 4px'
           }}>✕</button>

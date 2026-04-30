@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { db } from './firebase'
+import { ref, onValue, set, push, remove } from 'firebase/database'
 import './App.css'
 
 const TRIP = {
@@ -585,58 +587,61 @@ function ExploreTab() {
 }
 
 function GamesTab() {
-  const [teams, setTeams] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('kubb-teams') || '[]') } catch { return [] }
-  })
-  const [matches, setMatches] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('kubb-matches') || '[]') } catch { return [] }
-  })
+  const [teams, setTeams] = useState([])
+  const [matches, setMatches] = useState([])
   const [newTeam, setNewTeam] = useState('')
   const [winner, setWinner] = useState('')
   const [loser, setLoser] = useState('')
   const [confirmClear, setConfirmClear] = useState(false)
 
-  const saveTeams = (updated) => {
-    setTeams(updated)
-    try { localStorage.setItem('kubb-teams', JSON.stringify(updated)) } catch {}
-  }
-
-  const saveMatches = (updated) => {
-    setMatches(updated)
-    try { localStorage.setItem('kubb-matches', JSON.stringify(updated)) } catch {}
-  }
+  useEffect(() => {
+    const teamsRef = ref(db, 'kubb/teams')
+    const matchesRef = ref(db, 'kubb/matches')
+    const unsubTeams = onValue(teamsRef, snap => {
+      const val = snap.val()
+      setTeams(val ? Object.values(val) : [])
+    })
+    const unsubMatches = onValue(matchesRef, snap => {
+      const val = snap.val()
+      setMatches(val ? Object.values(val).reverse() : [])
+    })
+    return () => { unsubTeams(); unsubMatches() }
+  }, [])
 
   const addTeam = () => {
     const trimmed = newTeam.trim()
     if (!trimmed || teams.includes(trimmed)) return
-    saveTeams([...teams, trimmed])
+    push(ref(db, 'kubb/teams'), trimmed)
     setNewTeam('')
   }
 
-  const removeTeam = (t) => {
-    saveTeams(teams.filter(x => x !== t))
+  const removeTeam = (team) => {
+    const teamsRef = ref(db, 'kubb/teams')
+    onValue(teamsRef, snap => {
+      const val = snap.val()
+      if (!val) return
+      const key = Object.keys(val).find(k => val[k] === team)
+      if (key) remove(ref(db, `kubb/teams/${key}`))
+    }, { onlyOnce: true })
   }
 
   const logMatch = () => {
     if (!winner || !loser || winner === loser) return
-    const match = {
+    push(ref(db, 'kubb/matches'), {
       winner,
       loser,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       date: new Date().toLocaleDateString([], { month: 'short', day: 'numeric' }),
-    }
-    saveMatches([match, ...matches])
+    })
     setWinner('')
     setLoser('')
   }
 
   const clearAll = () => {
-    saveTeams([])
-    saveMatches([])
+    set(ref(db, 'kubb'), null)
     setConfirmClear(false)
   }
 
-  // Build leaderboard
   const standings = teams.map(team => {
     const wins = matches.filter(m => m.winner === team).length
     const losses = matches.filter(m => m.loser === team).length
@@ -655,14 +660,11 @@ function GamesTab() {
     fontWeight: 700, fontSize: 16, cursor: 'pointer'
   }
 
-  const selectStyle = {
-    ...inputStyle, flex: 1, cursor: 'pointer'
-  }
+  const selectStyle = { ...inputStyle, flex: 1, cursor: 'pointer' }
 
   return (
     <div className="cards" style={{ paddingTop: 24 }}>
 
-      {/* TEAM SETUP */}
       <div className="card">
         <div className="card-label">⚔️ Teams</div>
         <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
@@ -690,20 +692,19 @@ function GamesTab() {
         ))}
       </div>
 
-      {/* LOG A MATCH */}
       {teams.length >= 2 && (
         <div className="card">
           <div className="card-label">🏆 Log a Match</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <span style={{ fontSize: 12, color: '#00e5ff', width: 44, fontFamily: 'Orbitron, monospace', fontSize: 9, letterSpacing: 1 }}>WINNER</span>
+              <span style={{ width: 44, fontFamily: 'Orbitron, monospace', fontSize: 9, letterSpacing: 1, color: '#00e5ff' }}>WINNER</span>
               <select value={winner} onChange={e => setWinner(e.target.value)} style={selectStyle}>
                 <option value="">Select...</option>
                 {teams.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <span style={{ fontSize: 12, color: '#ff6ec7', width: 44, fontFamily: 'Orbitron, monospace', fontSize: 9, letterSpacing: 1 }}>LOSER</span>
+              <span style={{ width: 44, fontFamily: 'Orbitron, monospace', fontSize: 9, letterSpacing: 1, color: '#ff6ec7' }}>LOSER</span>
               <select value={loser} onChange={e => setLoser(e.target.value)} style={selectStyle}>
                 <option value="">Select...</option>
                 {teams.filter(t => t !== winner).map(t => <option key={t} value={t}>{t}</option>)}
@@ -719,14 +720,11 @@ function GamesTab() {
                 fontSize: 13, letterSpacing: 1,
                 fontFamily: 'Orbitron, monospace'
               }}
-            >
-              LOG MATCH
-            </button>
+            >LOG MATCH</button>
           </div>
         </div>
       )}
 
-      {/* LEADERBOARD */}
       {standings.length > 0 && (
         <div className="card">
           <div className="card-label">📊 Leaderboard</div>
@@ -748,7 +746,6 @@ function GamesTab() {
         </div>
       )}
 
-      {/* MATCH HISTORY */}
       {matches.length > 0 && (
         <div className="card">
           <div className="card-label">📜 Match History</div>
@@ -767,7 +764,6 @@ function GamesTab() {
         </div>
       )}
 
-      {/* CLEAR DATA */}
       {(teams.length > 0 || matches.length > 0) && (
         <div style={{ textAlign: 'center', paddingBottom: 8 }}>
           {!confirmClear

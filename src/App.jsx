@@ -18,8 +18,8 @@ const TRIP = {
   ],
 }
 
-const LAT = 34.485
-const LON = -77.387
+const LAT = 34.508277
+const LON = -77.389672
 const NOAA_STATION = '8658120'
 
 // --- DATA HOOKS ---
@@ -78,11 +78,25 @@ function useNoaaTides() {
 }
 
 const WX_LABELS = {
-  0: 'Clear Sky', 1: 'Mainly Clear', 2: 'Partly Cloudy', 3: 'Overcast',
-  45: 'Foggy', 48: 'Icy Fog', 51: 'Light Drizzle', 53: 'Drizzle',
-  55: 'Heavy Drizzle', 61: 'Light Rain', 63: 'Rain', 65: 'Heavy Rain',
-  71: 'Light Snow', 73: 'Snow', 75: 'Heavy Snow', 80: 'Rain Showers',
-  81: 'Rain Showers', 82: 'Violent Showers', 95: 'Thunderstorm',
+  0: { label: 'Clear Sky', emoji: '☀️' },
+  1: { label: 'Mainly Clear', emoji: '🌤️' },
+  2: { label: 'Partly Cloudy', emoji: '⛅' },
+  3: { label: 'Overcast', emoji: '☁️' },
+  45: { label: 'Foggy', emoji: '🌫️' },
+  48: { label: 'Icy Fog', emoji: '🌫️' },
+  51: { label: 'Light Drizzle', emoji: '🌦️' },
+  53: { label: 'Drizzle', emoji: '🌦️' },
+  55: { label: 'Heavy Drizzle', emoji: '🌧️' },
+  61: { label: 'Light Rain', emoji: '🌧️' },
+  63: { label: 'Rain', emoji: '🌧️' },
+  65: { label: 'Heavy Rain', emoji: '🌧️' },
+  71: { label: 'Light Snow', emoji: '🌨️' },
+  73: { label: 'Snow', emoji: '❄️' },
+  75: { label: 'Heavy Snow', emoji: '❄️' },
+  80: { label: 'Rain Showers', emoji: '🌦️' },
+  81: { label: 'Showers', emoji: '🌧️' },
+  82: { label: 'Heavy Showers', emoji: '⛈️' },
+  95: { label: 'Thunderstorm', emoji: '⛈️' },
 }
 
 function formatTideTime(timeStr) {
@@ -94,7 +108,76 @@ function formatTideTime(timeStr) {
 }
 
 // --- TABS ---
+function HouseNeeds() {
+  const [needs, setNeeds] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('house-needs') || '[]') } catch { return [] }
+  })
+  const [newNeed, setNewNeed] = useState('')
 
+  const saveNeeds = (updated) => {
+    setNeeds(updated)
+    try { localStorage.setItem('house-needs', JSON.stringify(updated)) } catch {}
+  }
+
+  const addNeed = () => {
+    const trimmed = newNeed.trim()
+    if (!trimmed) return
+    saveNeeds([...needs, { text: trimmed, done: false }])
+    setNewNeed('')
+  }
+
+  const toggleNeed = (i) => {
+    const updated = needs.map((n, idx) => idx === i ? { ...n, done: !n.done } : n)
+    saveNeeds(updated)
+  }
+
+  const removeNeed = (i) => {
+    saveNeeds(needs.filter((_, idx) => idx !== i))
+  }
+
+  return (
+    <div className="card">
+      <div className="card-label">🏠 House Needs</div>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+        <input
+          value={newNeed}
+          onChange={e => setNewNeed(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && addNeed()}
+          placeholder="Add item..."
+          style={{
+            flex: 1, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,110,199,0.3)',
+            borderRadius: 10, padding: '8px 12px', color: '#fff', fontSize: 13,
+            outline: 'none', fontFamily: 'Exo 2, sans-serif'
+          }}
+        />
+        <button onClick={addNeed} style={{
+          background: 'linear-gradient(135deg, #ff6ec7, #00e5ff)', border: 'none',
+          borderRadius: 10, padding: '8px 14px', color: '#0a0015',
+          fontWeight: 700, fontSize: 18, cursor: 'pointer'
+        }}>+</button>
+      </div>
+      {needs.length === 0 && <div className="card-sub">No items yet</div>}
+      {needs.map((n, i) => (
+        <div key={i} className="activity-item" style={{ justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1 }} onClick={() => toggleNeed(i)}>
+            <div style={{
+              width: 18, height: 18, borderRadius: 4, border: '2px solid rgba(255,110,199,0.5)',
+              background: n.done ? 'linear-gradient(135deg, #ff6ec7, #00e5ff)' : 'transparent',
+              flexShrink: 0, cursor: 'pointer'
+            }} />
+            <div style={{ fontSize: 14, color: n.done ? 'rgba(255,255,255,0.35)' : '#ffd6f0', textDecoration: n.done ? 'line-through' : 'none', cursor: 'pointer' }}>
+              {n.text}
+            </div>
+          </div>
+          <button onClick={() => removeNeed(i)} style={{
+            background: 'none', border: 'none', color: 'rgba(255,110,199,0.4)',
+            fontSize: 16, cursor: 'pointer', padding: '0 4px'
+          }}>✕</button>
+        </div>
+      ))}
+    </div>
+  )
+}
 function HomeTab() {
   const [now, setNow] = useState(new Date())
   useEffect(() => {
@@ -164,6 +247,8 @@ function HomeTab() {
             </div>
           ))}
         </div>
+        {/* HOUSE NEEDS */}
+        <HouseNeeds />
       </div>
     </div>
   )
@@ -174,7 +259,7 @@ function useForecast() {
   const [error, setError] = useState(false)
   useEffect(() => {
     const fetch_ = () =>
-      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&daily=weathercode,temperature_2m_max,temperature_2m_min,sunrise,sunset&hourly=uv_index&temperature_unit=fahrenheit&timezone=America/New_York`)
+      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&daily=weathercode,temperature_2m_max,temperature_2m_min,sunrise,sunset&hourly=uv_index,precipitation_probability&temperature_unit=fahrenheit&timezone=America/New_York`)
         .then(r => r.json()).then(d => setData(d)).catch(() => setError(true))
     fetch_()
     const id = setInterval(fetch_, 5 * 60 * 1000)
@@ -274,7 +359,7 @@ function WeatherTab() {
         {weather.data && (
           <>
             <div className="card-main">{Math.round(weather.data.temperature_2m)}°F</div>
-            <div className="card-sub">{WX_LABELS[weather.data.weathercode] ?? 'Unknown'}</div>
+            <div className="card-sub">{WX_LABELS[weather.data.weathercode]?.emoji} {WX_LABELS[weather.data.weathercode]?.label ?? 'Unknown'}</div>
             <div className="card-detail">
               <span>Humidity</span> {weather.data.relativehumidity_2m}%
               {'  ·  '}
@@ -348,16 +433,40 @@ function WeatherTab() {
       <div className="card">
         <div className="card-label">7-Day Forecast</div>
        {!forecast && <div className="loading">Loading...</div>}
-        {forecast?.daily && forecast.daily.time.map((date, i) => (
-          <div className="forecast-row" key={date}>
-            <div className="forecast-day">{i === 0 ? 'Now' : DAYS[new Date(date).getDay()]}</div>
-            <div className="forecast-desc">{WX_LABELS[forecast.daily.weathercode[i]] ?? '—'}</div>
-            <div className="forecast-temps">
-              {Math.round(forecast.daily.temperature_2m_max[i])}°
-              <span className="low">{Math.round(forecast.daily.temperature_2m_min[i])}°</span>
+       {forecast?.daily && forecast.daily.time.map((date, i) => {
+          const wx = WX_LABELS[forecast.daily.weathercode[i]]
+          // Get hourly precip for this day (24 hours starting at index i*24)
+          const hourlyPrecip = forecast?.hourly?.precipitation_probability?.slice(i * 24, i * 24 + 24) || []
+          const amPrecip = hourlyPrecip.slice(6, 12)   // 6am-12pm
+          const pmPrecip = hourlyPrecip.slice(12, 18)  // 12pm-6pm
+          const evePrecip = hourlyPrecip.slice(18, 24) // 6pm-12am
+          const amMax = Math.max(...amPrecip, 0)
+          const pmMax = Math.max(...pmPrecip, 0)
+          const eveMax = Math.max(...evePrecip, 0)
+          const threshold = 30
+          const rainTimes = [
+            amMax >= threshold && 'AM',
+            pmMax >= threshold && 'PM',
+            eveMax >= threshold && 'Eve',
+          ].filter(Boolean)
+
+          return (
+            <div className="forecast-row" key={date}>
+              <div className="forecast-day">{i === 0 ? 'Today' : DAYS[new Date(date + 'T12:00:00').getDay()]}</div>
+              <div className="forecast-desc">
+                <span style={{ marginRight: 4 }}>{wx?.emoji}</span>
+                {rainTimes.length > 0
+                  ? <span style={{ color: '#00e5ff', fontSize: 11 }}>Rain {rainTimes.join(' · ')}</span>
+                  : <span>{wx?.label ?? '—'}</span>
+                }
+              </div>
+              <div className="forecast-temps">
+                {Math.round(forecast.daily.temperature_2m_max[i])}°
+                <span className="low">{Math.round(forecast.daily.temperature_2m_min[i])}°</span>
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
       {/* TIDES */}
@@ -429,31 +538,6 @@ const STORES = [
 const AREAS = ['On Island', 'Sneads Ferry', 'Surf City']
 
 function ExploreTab() {
-  const [needs, setNeeds] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('house-needs') || '[]') } catch { return [] }
-  })
-  const [newNeed, setNewNeed] = useState('')
-
-  const saveNeeds = (updated) => {
-    setNeeds(updated)
-    try { localStorage.setItem('house-needs', JSON.stringify(updated)) } catch {}
-  }
-
-  const addNeed = () => {
-    const trimmed = newNeed.trim()
-    if (!trimmed) return
-    saveNeeds([...needs, { text: trimmed, done: false }])
-    setNewNeed('')
-  }
-
-  const toggleNeed = (i) => {
-    const updated = needs.map((n, idx) => idx === i ? { ...n, done: !n.done } : n)
-    saveNeeds(updated)
-  }
-
-  const removeNeed = (i) => {
-    saveNeeds(needs.filter((_, idx) => idx !== i))
-  }
 
   return (
     <div className="cards" style={{ paddingTop: 24 }}>
@@ -492,48 +576,6 @@ function ExploreTab() {
               </div>
               <a href={s.maps} target="_blank" rel="noreferrer" style={{ fontSize: 16, textDecoration: 'none' }}>📍</a>
             </div>
-          </div>
-        ))}
-      </div>
-
-      {/* HOUSE NEEDS */}
-      <div className="card">
-        <div className="card-label">🏠 House Needs</div>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-          <input
-            value={newNeed}
-            onChange={e => setNewNeed(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && addNeed()}
-            placeholder="Add item..."
-            style={{
-              flex: 1, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,110,199,0.3)',
-              borderRadius: 10, padding: '8px 12px', color: '#fff', fontSize: 13,
-              outline: 'none', fontFamily: 'Exo 2, sans-serif'
-            }}
-          />
-          <button onClick={addNeed} style={{
-            background: 'linear-gradient(135deg, #ff6ec7, #00e5ff)', border: 'none',
-            borderRadius: 10, padding: '8px 14px', color: '#0a0015',
-            fontWeight: 700, fontSize: 18, cursor: 'pointer'
-          }}>+</button>
-        </div>
-        {needs.length === 0 && <div className="card-sub">No items yet</div>}
-        {needs.map((n, i) => (
-          <div key={i} className="activity-item" style={{ justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1 }} onClick={() => toggleNeed(i)}>
-              <div style={{
-                width: 18, height: 18, borderRadius: 4, border: '2px solid rgba(255,110,199,0.5)',
-                background: n.done ? 'linear-gradient(135deg, #ff6ec7, #00e5ff)' : 'transparent',
-                flexShrink: 0, cursor: 'pointer'
-              }} />
-              <div style={{ fontSize: 14, color: n.done ? 'rgba(255,255,255,0.35)' : '#ffd6f0', textDecoration: n.done ? 'line-through' : 'none', cursor: 'pointer' }}>
-                {n.text}
-              </div>
-            </div>
-            <button onClick={() => removeNeed(i)} style={{
-              background: 'none', border: 'none', color: 'rgba(255,110,199,0.4)',
-              fontSize: 16, cursor: 'pointer', padding: '0 4px'
-            }}>✕</button>
           </div>
         ))}
       </div>

@@ -530,9 +530,9 @@ function useNow() {
 function getVibeOpacity(timestamp, now) {
   if (!timestamp) return 1
   const ageMinutes = (now - timestamp) / (1000 * 60)
-  if (ageMinutes > 120) return 0
-  if (ageMinutes > 60) return 0.3
-  if (ageMinutes > 30) return 0.6
+  if (ageMinutes > 120) return 0.25
+  if (ageMinutes > 60) return 0.5
+  if (ageMinutes > 30) return 0.75
   return 1
 }
 

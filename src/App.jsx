@@ -506,12 +506,121 @@ function WeatherTab() {
   )
 }
 
+const VIBES = [
+  { emoji: '🏖️', label: 'Beach' },
+  { emoji: '🏊', label: 'Pool' },
+  { emoji: '😴', label: 'Nap' },
+  { emoji: '🍔', label: 'Food' },
+  { emoji: '🥃', label: 'Shots' },
+  { emoji: '🎉', label: 'Party' },
+  { emoji: '🎲', label: 'Board Games' },
+  { emoji: '🎬', label: 'Movie' },
+  { emoji: '🍺', label: 'Brews Cruise' },
+]
+
+function useNow() {
+  const [now, setNow] = useState(Date.now())
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 60 * 1000)
+    return () => clearInterval(id)
+  }, [])
+  return now
+}
+
+function getVibeOpacity(timestamp, now) {
+  if (!timestamp) return 1
+  const ageMinutes = (now - timestamp) / (1000 * 60)
+  if (ageMinutes > 120) return 0
+  if (ageMinutes > 60) return 0.3
+  if (ageMinutes > 30) return 0.6
+  return 1
+}
+
+function getVibeAge(timestamp, now) {
+  if (!timestamp) return null
+  const ageMinutes = Math.floor((now - timestamp) / (1000 * 60))
+  if (ageMinutes < 1) return 'just now'
+  if (ageMinutes < 60) return `${ageMinutes}m ago`
+  const hours = Math.floor(ageMinutes / 60)
+  const mins = ageMinutes % 60
+  return mins > 0 ? `${hours}h ${mins}m ago` : `${hours}h ago`
+}
+
 function CrewTab() {
+  const [vibeVotes, setVibeVotes] = useState({})
+  const [selectedVibe, setSelectedVibe] = useState(null)
+  const now = useNow()
+
+  useEffect(() => {
+    const vibeRef = ref(db, 'crew/vibes')
+    const unsubVibe = onValue(vibeRef, snap => setVibeVotes(snap.val() || {}))
+    return () => unsubVibe()
+  }, [])
+
+  const voteVibe = (label) => {
+    const key = label.toLowerCase().replace(/[^a-z0-9]/g, '_')
+    if (selectedVibe === label) {
+      remove(ref(db, `crew/vibes/${key}`))
+      setSelectedVibe(null)
+    } else {
+      if (selectedVibe) {
+        const oldKey = selectedVibe.toLowerCase().replace(/[^a-z0-9]/g, '_')
+        remove(ref(db, `crew/vibes/${oldKey}`))
+      }
+      set(ref(db, `crew/vibes/${key}`), { count: 1, timestamp: Date.now() })
+      setSelectedVibe(label)
+    }
+  }
+
+  const resetVibes = () => { set(ref(db, 'crew/vibes'), null); setSelectedVibe(null) }
+
   return (
     <div className="cards" style={{ paddingTop: 24 }}>
       <div className="card">
-        <div className="card-label">Crew</div>
-        <div className="card-sub">Coming soon — poll & vibe check</div>
+        <div className="card-label">✌️ Crew Vibe</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 16 }}>
+          {VIBES.map(({ emoji, label }) => {
+            const key = label.toLowerCase().replace(/[^a-z0-9]/g, '_')
+            const data = vibeVotes[key]
+            const count = data?.count || 0
+            const timestamp = data?.timestamp || null
+            const opacity = getVibeOpacity(timestamp, now)
+            const age = getVibeAge(timestamp, now)
+            const selected = selectedVibe === label
+            const faded = count > 0 && opacity < 1
+            return (
+              <div
+                key={label}
+                onClick={() => voteVibe(label)}
+                style={{
+                  background: selected ? 'rgba(0,229,255,0.15)' : 'rgba(255,255,255,0.05)',
+                  border: `1px solid ${selected ? 'rgba(0,229,255,0.5)' : 'rgba(255,255,255,0.08)'}`,
+                  borderRadius: 14, padding: '12px 8px', cursor: 'pointer',
+                  textAlign: 'center', opacity: count > 0 ? Math.max(0.2, opacity) : 1,
+                  transition: 'opacity 0.5s ease'
+                }}
+              >
+                <div style={{ fontSize: 28, marginBottom: 4 }}>{emoji}</div>
+                <div style={{ fontSize: 10, color: selected ? '#00e5ff' : 'rgba(255,255,255,0.5)', marginBottom: 2 }}>{label}</div>
+                {count > 0 && opacity > 0 && (
+                  <>
+                    <div style={{ fontSize: 13, color: '#fff', fontWeight: 600 }}>{count}</div>
+                    {age && <div style={{ fontSize: 9, color: faded ? '#ff6ec7' : 'rgba(255,255,255,0.3)', marginTop: 2 }}>{age}</div>}
+                  </>
+                )}
+              </div>
+            )
+          })}
+        </div>
+        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', fontFamily: 'Orbitron, monospace', letterSpacing: 1, marginBottom: 12 }}>
+          VIBES FADE AFTER 30M · CLEAR AFTER 2H
+        </div>
+        {Object.keys(vibeVotes).length > 0 && (
+          <button onClick={resetVibes} style={{
+            background: 'none', border: 'none', color: 'rgba(255,110,199,0.3)',
+            fontSize: 10, cursor: 'pointer', fontFamily: 'Orbitron, monospace', letterSpacing: 1
+          }}>RESET VIBES</button>
+        )}
       </div>
     </div>
   )

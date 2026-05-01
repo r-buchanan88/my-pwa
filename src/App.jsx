@@ -555,12 +555,13 @@ function getDeviceId() {
   return id
 }
 
+const deviceId = getDeviceId()
+
 function CrewTab() {
   const [vibeVotes, setVibeVotes] = useState({})
   const [selectedVibe, setSelectedVibe] = useState(null)
   const now = useNow()
-  const deviceId = getDeviceId()
-
+  
   useEffect(() => {
     const vibeRef = ref(db, 'crew/vibes')
     const unsub = onValue(vibeRef, snap => {

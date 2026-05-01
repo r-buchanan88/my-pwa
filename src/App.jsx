@@ -571,7 +571,24 @@ function CrewTab() {
     const unsub = onValue(vibeRef, snap => {
       setVibeVotes(snap.val() || {})
     })
-    return () => unsub()
+
+    // Clean up votes older than 2 hours
+    const cleanup = setInterval(() => {
+      onValue(vibeRef, snap => {
+        const val = snap.val() || {}
+        for (const [vibeKey, vibeData] of Object.entries(val)) {
+          const votes = vibeData?.votes || {}
+          for (const [deviceKey, voteData] of Object.entries(votes)) {
+            const ageMinutes = (Date.now() - voteData.timestamp) / (1000 * 60)
+            if (ageMinutes > 120) {
+              remove(ref(db, `crew/vibes/${vibeKey}/votes/${deviceKey}`))
+            }
+          }
+        }
+      }, { onlyOnce: true })
+    }, 5 * 60 * 1000)
+
+    return () => { unsub(); clearInterval(cleanup) }
   }, [])
 
   const voteVibe = (label) => {

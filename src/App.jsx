@@ -573,7 +573,7 @@ function CrewTab() {
     })
 
     // Clean up votes older than 2 hours
-    const cleanup = setInterval(() => {
+    const runCleanup = () => {
       onValue(vibeRef, snap => {
         const val = snap.val() || {}
         for (const [vibeKey, vibeData] of Object.entries(val)) {
@@ -586,7 +586,9 @@ function CrewTab() {
           }
         }
       }, { onlyOnce: true })
-    }, 5 * 60 * 1000)
+    }
+    runCleanup()
+    const cleanup = setInterval(runCleanup, 5 * 60 * 1000)
 
     return () => { unsub(); clearInterval(cleanup) }
   }, [])

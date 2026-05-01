@@ -546,81 +546,106 @@ function getVibeAge(timestamp, now) {
   return mins > 0 ? `${hours}h ${mins}m ago` : `${hours}h ago`
 }
 
+function getDeviceId() {
+  let id = localStorage.getItem('device-id')
+  if (!id) {
+    id = Math.random().toString(36).slice(2) + Date.now().toString(36)
+    localStorage.setItem('device-id', id)
+  }
+  return id
+}
+
 function CrewTab() {
   const [vibeVotes, setVibeVotes] = useState({})
   const [selectedVibe, setSelectedVibe] = useState(null)
   const now = useNow()
+  const deviceId = getDeviceId()
 
   useEffect(() => {
     const vibeRef = ref(db, 'crew/vibes')
-    const unsubVibe = onValue(vibeRef, snap => setVibeVotes(snap.val() || {}))
-    return () => unsubVibe()
+    const unsub = onValue(vibeRef, snap => {
+      setVibeVotes(snap.val() || {})
+    })
+    return () => unsub()
   }, [])
 
   const voteVibe = (label) => {
     const key = label.toLowerCase().replace(/[^a-z0-9]/g, '_')
     if (selectedVibe === label) {
-      remove(ref(db, `crew/vibes/${key}`))
+      remove(ref(db, `crew/vibes/${key}/votes/${deviceId}`))
       setSelectedVibe(null)
     } else {
       if (selectedVibe) {
         const oldKey = selectedVibe.toLowerCase().replace(/[^a-z0-9]/g, '_')
-        remove(ref(db, `crew/vibes/${oldKey}`))
+        remove(ref(db, `crew/vibes/${oldKey}/votes/${deviceId}`))
       }
-      set(ref(db, `crew/vibes/${key}`), { count: 1, timestamp: Date.now() })
+      set(ref(db, `crew/vibes/${key}/votes/${deviceId}`), { timestamp: Date.now() })
       setSelectedVibe(label)
     }
   }
 
-  const resetVibes = () => { set(ref(db, 'crew/vibes'), null); setSelectedVibe(null) }
+  const resetVibes = () => {
+    set(ref(db, 'crew/vibes'), null)
+    setSelectedVibe(null)
+  }
+
+  // Build display data per vibe
+  const vibeDisplay = VIBES.map(({ emoji, label }) => {
+    const key = label.toLowerCase().replace(/[^a-z0-9]/g, '_')
+    const votes = vibeVotes[key]?.votes || {}
+    const entries = Object.entries(votes)
+    const count = entries.length
+    const myVote = votes[deviceId]
+    const selected = selectedVibe === label
+
+    // Find the most recent timestamp among all votes for this vibe
+    const latestTimestamp = entries.length > 0
+      ? Math.max(...entries.map(([, v]) => v.timestamp || 0))
+      : null
+
+    // Find my own vote timestamp for fading
+    const myTimestamp = myVote?.timestamp || null
+    const opacity = myTimestamp ? getVibeOpacity(myTimestamp, now) : 1
+    const age = latestTimestamp ? getVibeAge(latestTimestamp, now) : null
+    const faded = count > 0 && opacity < 1
+
+    return { emoji, label, count, selected, opacity, age, faded, myTimestamp }
+  })
+
+  const hasAnyVotes = vibeDisplay.some(v => v.count > 0)
 
   return (
     <div className="cards" style={{ paddingTop: 24 }}>
       <div className="card">
         <div className="card-label">✌️ Crew Vibe</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 16 }}>
-          {VIBES.map(({ emoji, label }) => {
-            const key = label.toLowerCase().replace(/[^a-z0-9]/g, '_')
-            const data = vibeVotes[key]
-            const count = data?.count || 0
-            const timestamp = data?.timestamp || null
-            const opacity = getVibeOpacity(timestamp, now)
-            const age = getVibeAge(timestamp, now)
-            const selected = selectedVibe === label
-            const faded = count > 0 && opacity < 1
-            return (
-              <div
-                key={label}
-                onClick={() => voteVibe(label)}
-                style={{
-                  background: selected ? 'rgba(0,229,255,0.15)' : 'rgba(255,255,255,0.05)',
-                  border: `1px solid ${selected ? 'rgba(0,229,255,0.5)' : 'rgba(255,255,255,0.08)'}`,
-                  borderRadius: 14, padding: '12px 8px', cursor: 'pointer',
-                  textAlign: 'center', opacity: count > 0 ? Math.max(0.2, opacity) : 1,
-                  transition: 'opacity 0.5s ease'
-                }}
-              >
-                <div style={{ fontSize: 28, marginBottom: 4 }}>{emoji}</div>
-                <div style={{ fontSize: 10, color: selected ? '#00e5ff' : 'rgba(255,255,255,0.5)', marginBottom: 2 }}>{label}</div>
-                {count > 0 && opacity > 0 && (
-                  <>
-                    <div style={{ fontSize: 13, color: '#fff', fontWeight: 600 }}>{count}</div>
-                    {age && <div style={{ fontSize: 9, color: faded ? '#ff6ec7' : 'rgba(255,255,255,0.3)', marginTop: 2 }}>{age}</div>}
-                  </>
-                )}
-              </div>
-            )
-          })}
+          {vibeDisplay.map(({ emoji, label, count, selected, opacity, age, faded }) => (
+            <div
+              key={label}
+              onClick={() => voteVibe(label)}
+              style={{
+                background: selected ? 'rgba(0,229,255,0.15)' : 'rgba(255,255,255,0.05)',
+                border: `1px solid ${selected ? 'rgba(0,229,255,0.5)' : 'rgba(255,255,255,0.08)'}`,
+                borderRadius: 14, padding: '12px 8px', cursor: 'pointer',
+                textAlign: 'center',
+                opacity: selected ? 1 : count > 0 ? Math.max(0.2, opacity) : 0.25,
+                transition: 'opacity 0.5s ease'
+              }}
+            >
+              <div style={{ fontSize: 28, marginBottom: 4 }}>{emoji}</div>
+              <div style={{ fontSize: 10, color: selected ? '#00e5ff' : 'rgba(255,255,255,0.5)', marginBottom: 2 }}>{label}</div>
+              {count > 0 && (
+                <>
+                  <div style={{ fontSize: 13, color: '#fff', fontWeight: 600 }}>{count}</div>
+                  {age && <div style={{ fontSize: 9, color: faded ? '#ff6ec7' : 'rgba(255,255,255,0.3)', marginTop: 2 }}>{age}</div>}
+                </>
+              )}
+            </div>
+          ))}
         </div>
         <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', fontFamily: 'Orbitron, monospace', letterSpacing: 1, marginBottom: 12 }}>
           VIBES FADE AFTER 30M · CLEAR AFTER 2H
         </div>
-        {Object.keys(vibeVotes).length > 0 && (
-          <button onClick={resetVibes} style={{
-            background: 'none', border: 'none', color: 'rgba(255,110,199,0.3)',
-            fontSize: 10, cursor: 'pointer', fontFamily: 'Orbitron, monospace', letterSpacing: 1
-          }}>RESET VIBES</button>
-        )}
       </div>
     </div>
   )

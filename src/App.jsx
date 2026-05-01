@@ -11,12 +11,12 @@ const TRIP = {
   address: '1113 New River Inlet Rd, North Topsail Beach, NC 28460',
   mapsUrl: 'https://maps.apple.com/?address=1113+New+River+Inlet+Rd,+North+Topsail+Beach,+NC+28460',
   activities: [
-    'Beach Days',
-    'Brews Cruise',
-    'Taco Night',
-    'Fancy Dinner',
-    'Board Games',
-    'Pier Fishing',
+    { name: 'WP Taco Night', emoji: '🌮' },
+    { name: 'Murder Mystery Party', emoji: '🔍' },
+    { name: 'Fancy Dinner', emoji: '🍽️' },
+    { name: 'Birthday Celebrations', emoji: '🎂' },
+    { name: 'Pokey Stix', emoji: '🍕' },
+    { name: 'Disc Golf', emoji: '🥏' },
   ],
 }
 
@@ -243,12 +243,14 @@ function HomeTab() {
         {/* Activities */}
         <div className="card">
           <div className="card-label">Trip Activities</div>
-          {TRIP.activities.map((a, i) => (
-            <div className="activity-item" key={i}>
-              <div className="activity-dot" />
-              <div className="activity-name">{a}</div>
-            </div>
-          ))}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 12px', marginTop: 4 }}>
+            {TRIP.activities.map((a, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 18 }}>{a.emoji}</span>
+                <span style={{ fontSize: 13, color: '#ffd6f0' }}>{a.name}</span>
+              </div>
+            ))}
+          </div>
         </div>
         {/* HOUSE NEEDS */}
         <HouseNeeds />

@@ -11,12 +11,14 @@ const TRIP = {
   address: '1113 New River Inlet Rd, North Topsail Beach, NC 28460',
   mapsUrl: 'https://maps.apple.com/?address=1113+New+River+Inlet+Rd,+North+Topsail+Beach,+NC+28460',
   activities: [
-    { name: 'WP Taco Night', emoji: '🌮' },
+    { name: 'Taco Night', emoji: '🌮' },
     { name: 'Murder Mystery Party', emoji: '🔍' },
     { name: 'Fancy Dinner', emoji: '🍽️' },
     { name: 'Birthday Celebrations', emoji: '🎂' },
     { name: 'Pokey Stix', emoji: '🍕' },
     { name: 'Disc Golf', emoji: '🥏' },
+    { name: 'Oysters', emoji: '🦪' },
+    { name: 'Party Punch', emoji: '🍹' },
   ],
 }
 

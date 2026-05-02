@@ -1092,11 +1092,17 @@ function CrewTab() {
       }
 
       // Shots immediate bump
+     // Shots immediate bump — once per device per day
       if (label === 'Shots') {
-        const rallyRef = ref(db, `crew/daily/${dateKey}/rally`)
-        onValue(rallyRef, snap => {
-          set(rallyRef, Math.min(100, (snap.val() || 0) + 10))
-        }, { onlyOnce: true })
+        const shotsKey = `shots-bump-${dateKey}`
+        const alreadyBumped = localStorage.getItem(shotsKey)
+        if (!alreadyBumped) {
+          const rallyRef = ref(db, `crew/daily/${dateKey}/rally`)
+          onValue(rallyRef, snap => {
+            set(rallyRef, Math.min(100, (snap.val() || 0) + 10))
+          }, { onlyOnce: true })
+          localStorage.setItem(shotsKey, '1')
+        }
       }
 
       set(ref(db, `crew/vibes/${key}/votes/${deviceId}`), { timestamp: Date.now() })

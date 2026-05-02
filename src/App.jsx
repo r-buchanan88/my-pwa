@@ -814,46 +814,54 @@ function RallyGauge({ dateKey }) {
 function usePassiveAccumulation(selectedVibe, vibeVotes, getTodayKey) {
   useEffect(() => {
     const interval = setInterval(() => {
-      if (!vibeVotes) return
       const dateKey = getTodayKey()
 
-      for (const [vibeKey, vibeData] of Object.entries(vibeVotes)) {
-        const votes = vibeData?.votes || {}
-        for (const [, voteData] of Object.entries(votes)) {
-          if (!voteData?.timestamp) continue
-          const ageMinutes = (Date.now() - voteData.timestamp) / (1000 * 60)
-          if (ageMinutes > 120) continue
-          // Add 5 minutes of credit (matching our interval)
-          const statsRef = ref(db, `crew/daily/${dateKey}/stats/${vibeKey}/totalMinutes`)
-          onValue(statsRef, snap => {
-            const current = snap.val() || 0
-            set(statsRef, current + 5)
-          }, { onlyOnce: true })
-        }
-      }
+      // Each device only accumulates its own active vote
+      if (!selectedVibe) return
+      const key = selectedVibe.toLowerCase().replace(/[^a-z0-9]/g, '_')
+      const myVoteRef = ref(db, `crew/vibes/${key}/votes/${deviceId}`)
 
-      // Apply decay to daily stats — burn 10 minutes every 5 min (2x speed)
-      const statsRef = ref(db, `crew/daily/${dateKey}/stats`)
-      onValue(statsRef, snap => {
-        const stats = snap.val() || {}
-        for (const [vibeKey, val] of Object.entries(stats)) {
-          const current = val.totalMinutes || 0
-          // Only decay vibes with no active votes
-          const hasActiveVotes = vibeVotes[vibeKey]?.votes &&
-            Object.values(vibeVotes[vibeKey].votes).some(v => {
-              const age = (Date.now() - v.timestamp) / (1000 * 60)
-              return age <= 120
-            })
-          if (!hasActiveVotes && current > 0) {
-            set(ref(db, `crew/daily/${dateKey}/stats/${vibeKey}/totalMinutes`),
-              Math.max(0, current - 10))
+      onValue(myVoteRef, snap => {
+        const vote = snap.val()
+        if (!vote?.timestamp) return
+        const ageMinutes = (Date.now() - vote.timestamp) / (1000 * 60)
+        if (ageMinutes > 120) return
+
+        // Add 5 minutes for this device's vote
+        const statsRef = ref(db, `crew/daily/${dateKey}/stats/${key}/totalMinutes`)
+        onValue(statsRef, snap2 => {
+          set(statsRef, (snap2.val() || 0) + 5)
+        }, { onlyOnce: true })
+
+        // Recalculate rally from current stats
+        const allStatsRef = ref(db, `crew/daily/${dateKey}/stats`)
+        onValue(allStatsRef, snap3 => {
+          const stats = snap3.val() || {}
+          const VIBE_POINTS = {
+            brews_cruise: 2, shots: 2, party: 2,
+            beach: 0, pool: 0, food: 0,
+            nap: -1, board_games: -1, movie: -1,
           }
-        }
-        // Recalculate rally after decay
-        updateRallyFromStats(dateKey, stats)
+          let totalMinutes = 0
+          let weightedPoints = 0
+          for (const [k, val] of Object.entries(stats)) {
+            const rawMins = val.totalMinutes || 0
+            const hasActive = vibeVotes[k]?.votes &&
+              Object.values(vibeVotes[k].votes).some(v =>
+                v.timestamp && (Date.now() - v.timestamp) / (1000 * 60) <= 120
+              )
+            const decayedMins = hasActive ? rawMins : Math.max(0, rawMins - 10)
+            totalMinutes += decayedMins
+            weightedPoints += (VIBE_POINTS[k] ?? 0) * decayedMins
+          }
+          const participationScore = Math.min(1, totalMinutes / 840)
+          const positivityRaw = totalMinutes > 0 ? weightedPoints / totalMinutes : 0
+          const positivityScore = (Math.max(-1, Math.min(2, positivityRaw)) + 1) / 3
+          const rally = Math.round((participationScore * 60) + (positivityScore * 40))
+          set(ref(db, `crew/daily/${dateKey}/rally`), Math.min(100, Math.max(0, rally)))
+        }, { onlyOnce: true })
       }, { onlyOnce: true })
-
-    }, 5 * 60 * 1000) // every 5 minutes
+    }, 5 * 60 * 1000)
 
     return () => clearInterval(interval)
   }, [vibeVotes])

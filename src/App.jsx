@@ -171,7 +171,7 @@ function formatTideTime(timeStr) {
 
 function BeachScoreCard({ forecast }) {
   const scores = getBeachScores(forecast, 0)
-  if (!scores || scores.length === 0) return null
+  if if (!forecast || !scores || scores.length === 0) return null
 
   const maxScore = Math.max(...scores.map(s => s.score))
   const bestWindow = scores.find(s => s.score === maxScore)

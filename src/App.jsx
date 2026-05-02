@@ -1019,30 +1019,28 @@ function CrewTab() {
       const statsRef = ref(db, `crew/daily/${dateKey}/stats`)
       onValue(statsRef, snap => {
         const stats = snap.val() || {}
-        for (const [vibeKey, val] of Object.entries(stats)) {
-          const current = val.totalMinutes || 0
-          const hasActive = vibeVotes[vibeKey]?.votes &&
-            Object.values(vibeVotes[vibeKey].votes).some(v =>
-              v.timestamp && (Date.now() - v.timestamp) / (1000 * 60) <= 120
-            )
-          if (!hasActive && current > 0) {
-            set(ref(db, `crew/daily/${dateKey}/stats/${vibeKey}/totalMinutes`),
-              Math.max(0, current - 10))
-          }
-        }
 
         const VIBE_POINTS = {
           brews_cruise: 2, shots: 2, party: 2,
           beach: 0, pool: 0, food: 0,
           nap: -1, board_games: -1, movie: -1,
         }
+
         let totalMinutes = 0
         let weightedPoints = 0
+
         for (const [key, val] of Object.entries(stats)) {
-          const mins = val.totalMinutes || 0
-          totalMinutes += mins
-          weightedPoints += (VIBE_POINTS[key] ?? 0) * mins
+          const rawMins = val.totalMinutes || 0
+          // Apply decay in memory only for rally calculation
+          const hasActive = vibeVotes[key]?.votes &&
+            Object.values(vibeVotes[key].votes).some(v =>
+              v.timestamp && (Date.now() - v.timestamp) / (1000 * 60) <= 120
+            )
+          const decayedMins = hasActive ? rawMins : Math.max(0, rawMins - 10)
+          totalMinutes += decayedMins
+          weightedPoints += (VIBE_POINTS[key] ?? 0) * decayedMins
         }
+
         const participationScore = Math.min(1, totalMinutes / 840)
         const positivityRaw = totalMinutes > 0 ? weightedPoints / totalMinutes : 0
         const positivityScore = (Math.max(-1, Math.min(2, positivityRaw)) + 1) / 3

@@ -703,114 +703,6 @@ const VIBES = [
   { emoji: '🍺', label: 'Brews Cruise' },
 ]
 
-function RallyGauge({ dateKey }) {
-  const [rallyScore, setRallyScore] = useState(0)
-  const [dailyStats, setDailyStats] = useState({})
-
-  useEffect(() => {
-    if (!dateKey) return
-    const rallyRef = ref(db, `crew/daily/${dateKey}/rally`)
-    const statsRef = ref(db, `crew/daily/${dateKey}/stats`)
-    const unsubRally = onValue(rallyRef, snap => setRallyScore(snap.val() || 0))
-    const unsubStats = onValue(statsRef, snap => setDailyStats(snap.val() || {}))
-    return () => { unsubRally(); unsubStats() }
-  }, [dateKey])
-
-  const SEGMENTS = 20
-  const lit = Math.round((rallyScore / 100) * SEGMENTS)
-
-  const segmentColor = (i) => {
-    const pct = i / SEGMENTS
-    if (pct < 0.4) return `rgba(180, 80, 220, ${i < lit ? 1 : 0.12})`
-    if (pct < 0.7) return `rgba(255, 110, 199, ${i < lit ? 1 : 0.12})`
-    return `rgba(0, 229, 255, ${i < lit ? 1 : 0.12})`
-  }
-
-  const VIBE_LABELS = {
-    beach: '🏖️ Beach', pool: '🏊 Pool', nap: '😴 Nap',
-    food: '🍔 Food', shots: '🥃 Shots', party: '🎉 Party',
-    board_games: '🎲 Board Games', movie: '🎬 Movie', brews_cruise: '🍺 Brews Cruise'
-  }
-
-  const statsEntries = Object.entries(dailyStats)
-    .filter(([, v]) => v.totalMinutes > 0)
-    .sort((a, b) => b[1].totalMinutes - a[1].totalMinutes)
-
-  const formatMinutes = (mins) => {
-    if (mins < 60) return `${mins}m`
-    const h = Math.floor(mins / 60)
-    const m = mins % 60
-    return m > 0 ? `${h}h ${m}m` : `${h}h`
-  }
-
-  return (
-    <div className="card">
-      <div className="card-label" style={{ fontFamily: 'Orbitron, monospace', letterSpacing: 3 }}>
-        ⚡ RALLY LEVEL
-      </div>
-
-      {/* Score number */}
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 12 }}>
-        <div style={{
-          fontSize: 42, fontWeight: 900, lineHeight: 1,
-          fontFamily: 'Orbitron, monospace',
-          color: rallyScore >= 70 ? '#00e5ff' : rallyScore >= 40 ? '#ff6ec7' : '#b450dc'
-        }}>{rallyScore}</div>
-        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontFamily: 'Orbitron, monospace' }}>/100</div>
-      </div>
-
-      {/* LED bar */}
-      <div style={{ display: 'flex', gap: 3, marginBottom: 16 }}>
-        {Array.from({ length: SEGMENTS }).map((_, i) => (
-          <div key={i} style={{
-            flex: 1, height: 18, borderRadius: 2,
-            background: segmentColor(i),
-            boxShadow: i < lit ? `0 0 6px ${segmentColor(i)}` : 'none',
-            transition: 'background 0.3s ease, box-shadow 0.3s ease'
-          }} />
-        ))}
-      </div>
-
-      {/* Rally label */}
-      <div style={{
-        fontFamily: 'Orbitron, monospace', fontSize: 10, letterSpacing: 2,
-        color: rallyScore >= 80 ? '#00e5ff' : rallyScore >= 60 ? '#ff6ec7' : rallyScore >= 40 ? '#b450dc' : 'rgba(255,255,255,0.3)',
-        marginBottom: 20
-      }}>
-        {rallyScore >= 80 ? '🔥 FULL SEND' :
-         rallyScore >= 60 ? '⚡ WE RALLYIN' :
-         rallyScore >= 40 ? '🌊 WARMING UP' :
-         rallyScore >= 20 ? '😴 SLOW START' : '💤 DEAD HOUR'}
-      </div>
-
-      {/* Daily stats */}
-      {statsEntries.length > 0 && (
-        <>
-          <div style={{ fontFamily: 'Orbitron, monospace', fontSize: 9, letterSpacing: 2, color: 'rgba(255,255,255,0.3)', marginBottom: 10 }}>
-            TODAY'S VIBE LOG
-          </div>
-          {statsEntries.map(([key, val]) => (
-            <div key={key} style={{
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.05)'
-            }}>
-              <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>
-                {VIBE_LABELS[key] ?? key}
-              </span>
-              <span style={{ fontSize: 12, color: '#ff6ec7', fontFamily: 'Orbitron, monospace' }}>
-                {formatMinutes(val.totalMinutes)}
-              </span>
-            </div>
-          ))}
-        </>
-      )}
-      {statsEntries.length === 0 && (
-        <div className="card-sub">No vibe activity yet today</div>
-      )}
-    </div>
-  )
-}
-
 function usePassiveAccumulation(selectedVibe, vibeVotes, getTodayKey) {
   useEffect(() => {
     const interval = setInterval(() => {
@@ -932,6 +824,7 @@ const deviceId = getDeviceId()
 
 function CrewTab() {
   const [vibeVotes, setVibeVotes] = useState({})
+  const [sessions, setSessions] = useState([])
   const [selectedVibe, setSelectedVibe] = useState(null)
   const now = useNow()
 
@@ -942,30 +835,26 @@ function CrewTab() {
     return `${est.getFullYear()}-${String(est.getMonth() + 1).padStart(2, '0')}-${String(est.getDate()).padStart(2, '0')}`
   }
 
+  const dateKey = getTodayKey()
+
+  const VIBE_POINTS = {
+    brews_cruise: 2, shots: 2, party: 2,
+    beach: 0, pool: 0, food: 0,
+    nap: -1, board_games: -1, movie: -1,
+  }
+
   useEffect(() => {
     const vibeRef = ref(db, 'crew/vibes')
-    const unsub = onValue(vibeRef, snap => {
+    const sessionsRef = ref(db, `crew/daily/${dateKey}/sessions`)
+
+    const unsubVibes = onValue(vibeRef, snap => {
       setVibeVotes(snap.val() || {})
     })
 
-    const runCleanup = () => {
-      onValue(vibeRef, snap => {
-        const val = snap.val() || {}
-        for (const [vibeKey, vibeData] of Object.entries(val)) {
-          const votes = vibeData?.votes || {}
-          for (const [deviceKey, voteData] of Object.entries(votes)) {
-            const ageMinutes = voteData.timestamp
-              ? (Date.now() - voteData.timestamp) / (1000 * 60)
-              : 999
-            if (ageMinutes > 120) {
-              remove(ref(db, `crew/vibes/${vibeKey}/votes/${deviceKey}`))
-            }
-          }
-        }
-      }, { onlyOnce: true })
-    }
-    runCleanup()
-    const cleanup = setInterval(runCleanup, 5 * 60 * 1000)
+    const unsubSessions = onValue(sessionsRef, snap => {
+      const val = snap.val() || {}
+      setSessions(Object.values(val))
+    })
 
     // Load this device's existing vote on mount
     onValue(vibeRef, snap => {
@@ -981,130 +870,77 @@ function CrewTab() {
       }
     }, { onlyOnce: true })
 
-    return () => { unsub(); clearInterval(cleanup) }
+    // Cleanup stale votes and write sessions for auto-cleared votes
+    const runCleanup = () => {
+      onValue(vibeRef, snap => {
+        const val = snap.val() || {}
+        for (const [vibeKey, vibeData] of Object.entries(val)) {
+          const votes = vibeData?.votes || {}
+          for (const [dKey, voteData] of Object.entries(votes)) {
+            const ageMinutes = voteData.timestamp
+              ? (Date.now() - voteData.timestamp) / (1000 * 60)
+              : 999
+            if (ageMinutes > 120) {
+              // Write completed session before clearing
+              const mins = Math.min(120, Math.round(ageMinutes))
+              push(ref(db, `crew/daily/${dateKey}/sessions`), {
+                vibe: vibeKey,
+                deviceId: dKey,
+                start: voteData.timestamp,
+                end: voteData.timestamp + mins * 60 * 1000,
+                minutes: mins,
+              })
+              remove(ref(db, `crew/vibes/${vibeKey}/votes/${dKey}`))
+              if (dKey === deviceId) setSelectedVibe(null)
+            }
+          }
+        }
+      }, { onlyOnce: true })
+    }
+    runCleanup()
+    const cleanup = setInterval(runCleanup, 5 * 60 * 1000)
+
+    return () => { unsubVibes(); unsubSessions(); clearInterval(cleanup) }
   }, [])
 
-  // Passive accumulation every 5 minutes
-  useEffect(() => {
-    if (!vibeVotes || Object.keys(vibeVotes).length === 0) return
-    const dateKey = getTodayKey()
-
-    const interval = setInterval(() => {
-      // Collect all active device IDs across all vibes
-      const allActiveDevices = new Set()
-      for (const vibeData of Object.values(vibeVotes)) {
-        const votes = vibeData?.votes || {}
-        for (const [dId, voteData] of Object.entries(votes)) {
-          const age = voteData?.timestamp
-            ? (Date.now() - voteData.timestamp) / (1000 * 60)
-            : 999
-          if (age <= 120) allActiveDevices.add(dId)
-        }
-      }
-
-      // Only the alphabetically lowest deviceId writes accumulation
-      const sortedDevices = [...allActiveDevices].sort()
-      if (sortedDevices[0] !== deviceId) return
-
-      // Accumulate active vibe minutes
-      for (const [vibeKey, vibeData] of Object.entries(vibeVotes)) {
-        const votes = vibeData?.votes || {}
-        let activeCount = 0
-        for (const [, voteData] of Object.entries(votes)) {
-          if (!voteData?.timestamp) continue
-          const ageMinutes = (Date.now() - voteData.timestamp) / (1000 * 60)
-          if (ageMinutes <= 120) activeCount++
-        }
-        if (activeCount > 0) {
-          const statsRef = ref(db, `crew/daily/${dateKey}/stats/${vibeKey}/totalMinutes`)
-          onValue(statsRef, snap => {
-            set(statsRef, (snap.val() || 0) + 5 * activeCount)
-          }, { onlyOnce: true })
-        }
-      }
-
-      // Decay inactive vibes and recalculate rally
-      const statsRef = ref(db, `crew/daily/${dateKey}/stats`)
-      onValue(statsRef, snap => {
-        const stats = snap.val() || {}
-
-        const VIBE_POINTS = {
-          brews_cruise: 2, shots: 2, party: 2,
-          beach: 0, pool: 0, food: 0,
-          nap: -1, board_games: -1, movie: -1,
-        }
-
-        let totalMinutes = 0
-        let weightedPoints = 0
-
-        for (const [key, val] of Object.entries(stats)) {
-          const rawMins = val.totalMinutes || 0
-          // Apply decay in memory only for rally calculation
-          const hasActive = vibeVotes[key]?.votes &&
-            Object.values(vibeVotes[key].votes).some(v =>
-              v.timestamp && (Date.now() - v.timestamp) / (1000 * 60) <= 120
-            )
-          const decayedMins = hasActive ? rawMins : Math.max(0, rawMins - 10)
-          totalMinutes += decayedMins
-          weightedPoints += (VIBE_POINTS[key] ?? 0) * decayedMins
-        }
-
-        const participationScore = Math.min(1, totalMinutes / 840)
-        const positivityRaw = totalMinutes > 0 ? weightedPoints / totalMinutes : 0
-        const positivityScore = (Math.max(-1, Math.min(2, positivityRaw)) + 1) / 3
-        const rally = Math.round((participationScore * 60) + (positivityScore * 40))
-        set(ref(db, `crew/daily/${dateKey}/rally`), Math.min(100, Math.max(0, rally)))
-      }, { onlyOnce: true })
-    }, 5 * 60 * 1000)
-
-    return () => clearInterval(interval)
-  }, [vibeVotes])
+  const writeSession = (label, timestamp) => {
+    if (!timestamp) return
+    const mins = Math.round((Date.now() - timestamp) / (1000 * 60))
+    if (mins < 1) return
+    const key = label.toLowerCase().replace(/[^a-z0-9]/g, '_')
+    push(ref(db, `crew/daily/${dateKey}/sessions`), {
+      vibe: key,
+      deviceId,
+      start: timestamp,
+      end: Date.now(),
+      minutes: Math.min(120, mins),
+    })
+  }
 
   const voteVibe = (label) => {
     const key = label.toLowerCase().replace(/[^a-z0-9]/g, '_')
-    const dateKey = getTodayKey()
 
     if (selectedVibe === label) {
-      // Accumulate final time before removing
       onValue(ref(db, `crew/vibes/${key}/votes/${deviceId}`), snap => {
         const vote = snap.val()
-        if (vote?.timestamp) {
-          const mins = Math.round((Date.now() - vote.timestamp) / (1000 * 60))
-          if (mins >= 1) {
-            const statsRef = ref(db, `crew/daily/${dateKey}/stats/${key}/totalMinutes`)
-            onValue(statsRef, snap2 => {
-              set(statsRef, (snap2.val() || 0) + mins)
-            }, { onlyOnce: true })
-          }
-        }
+        if (vote?.timestamp) writeSession(label, vote.timestamp)
         remove(ref(db, `crew/vibes/${key}/votes/${deviceId}`))
       }, { onlyOnce: true })
       setSelectedVibe(null)
     } else {
-      // Accumulate time on previous vibe before switching
       if (selectedVibe) {
         const oldKey = selectedVibe.toLowerCase().replace(/[^a-z0-9]/g, '_')
         onValue(ref(db, `crew/vibes/${oldKey}/votes/${deviceId}`), snap => {
           const vote = snap.val()
-          if (vote?.timestamp) {
-            const mins = Math.round((Date.now() - vote.timestamp) / (1000 * 60))
-            if (mins >= 1) {
-              const statsRef = ref(db, `crew/daily/${dateKey}/stats/${oldKey}/totalMinutes`)
-              onValue(statsRef, snap2 => {
-                set(statsRef, (snap2.val() || 0) + mins)
-              }, { onlyOnce: true })
-            }
-          }
+          if (vote?.timestamp) writeSession(selectedVibe, vote.timestamp)
           remove(ref(db, `crew/vibes/${oldKey}/votes/${deviceId}`))
         }, { onlyOnce: true })
       }
 
-      // Shots immediate bump
-     // Shots immediate bump — once per device per day
+      // Shots immediate bump — once per device per day
       if (label === 'Shots') {
         const shotsKey = `shots-bump-${dateKey}`
-        const alreadyBumped = localStorage.getItem(shotsKey)
-        if (!alreadyBumped) {
+        if (!localStorage.getItem(shotsKey)) {
           const rallyRef = ref(db, `crew/daily/${dateKey}/rally`)
           onValue(rallyRef, snap => {
             set(rallyRef, Math.min(100, (snap.val() || 0) + 10))
@@ -1118,7 +954,80 @@ function CrewTab() {
     }
   }
 
-  const dateKey = getTodayKey()
+  // Calculate vibe log totals from completed sessions
+  const vibeTotals = sessions.reduce((acc, s) => {
+    acc[s.vibe] = (acc[s.vibe] || 0) + (s.minutes || 0)
+    return acc
+  }, {})
+
+  // Add currently active votes to totals (live, not yet written as sessions)
+  for (const [vibeKey, vibeData] of Object.entries(vibeVotes)) {
+    const votes = vibeData?.votes || {}
+    for (const [, voteData] of Object.entries(votes)) {
+      if (!voteData?.timestamp) continue
+      const ageMinutes = (Date.now() - voteData.timestamp) / (1000 * 60)
+      if (ageMinutes <= 120) {
+        vibeTotals[vibeKey] = (vibeTotals[vibeKey] || 0) + Math.round(ageMinutes)
+      }
+    }
+  }
+
+  // Calculate rally score from sessions + active votes
+  const totalUniqueDevices = new Set([
+    ...sessions.map(s => s.deviceId),
+    ...Object.values(vibeVotes).flatMap(v =>
+      Object.keys(v?.votes || {})
+    )
+  ]).size
+
+  let totalMinutes = 0
+  let weightedPoints = 0
+  for (const [key, mins] of Object.entries(vibeTotals)) {
+    // Apply decay for inactive vibes
+    const hasActive = vibeVotes[key]?.votes &&
+      Object.values(vibeVotes[key].votes).some(v =>
+        v.timestamp && (Date.now() - v.timestamp) / (1000 * 60) <= 120
+      )
+    const decayFactor = hasActive ? 1 : Math.max(0,
+      1 - (sessions
+        .filter(s => s.vibe === key)
+        .reduce((latest, s) => Math.max(latest, s.end || 0), 0)
+        ? (Date.now() - sessions
+            .filter(s => s.vibe === key)
+            .reduce((latest, s) => Math.max(latest, s.end || 0), 0)) / (1000 * 60 * 60)
+        : 0)
+    )
+    const effectiveMins = mins * decayFactor
+    totalMinutes += effectiveMins
+    weightedPoints += (VIBE_POINTS[key] ?? 0) * effectiveMins
+  }
+
+  const participationScore = Math.min(1, totalMinutes / 840)
+  const positivityRaw = totalMinutes > 0 ? weightedPoints / totalMinutes : 0
+  const positivityScore = (Math.max(-1, Math.min(2, positivityRaw)) + 1) / 3
+  const rallyScore = Math.round((participationScore * 60) + (positivityScore * 40))
+
+  // Write rally score to Firebase
+  useEffect(() => {
+    set(ref(db, `crew/daily/${dateKey}/rally`), Math.min(100, Math.max(0, rallyScore)))
+  }, [rallyScore])
+
+  const formatMinutes = (mins) => {
+    if (mins < 60) return `${Math.round(mins)}m`
+    const h = Math.floor(mins / 60)
+    const m = Math.round(mins % 60)
+    return m > 0 ? `${h}h ${m}m` : `${h}h`
+  }
+
+  const VIBE_LABELS = {
+    beach: '🏖️ Beach', pool: '🏊 Pool', nap: '😴 Nap',
+    food: '🍔 Food', shots: '🥃 Shots', party: '🎉 Party',
+    board_games: '🎲 Board Games', movie: '🎬 Movie', brews_cruise: '🍺 Brews Cruise'
+  }
+
+  const statsEntries = Object.entries(vibeTotals)
+    .filter(([, v]) => v >= 1)
+    .sort((a, b) => b[1] - a[1])
 
   return (
     <div className="cards" style={{ paddingTop: 24 }}>
@@ -1169,7 +1078,73 @@ function CrewTab() {
           VIBES FADE AFTER 30M · CLEAR AFTER 2H
         </div>
       </div>
-      <RallyGauge dateKey={dateKey} />
+
+      {/* RALLY GAUGE */}
+      <div className="card">
+        <div className="card-label" style={{ fontFamily: 'Orbitron, monospace', letterSpacing: 3 }}>
+          ⚡ RALLY LEVEL
+        </div>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 12 }}>
+          <div style={{
+            fontSize: 42, fontWeight: 900, lineHeight: 1,
+            fontFamily: 'Orbitron, monospace',
+            color: rallyScore >= 70 ? '#00e5ff' : rallyScore >= 40 ? '#ff6ec7' : '#b450dc'
+          }}>{rallyScore}</div>
+          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontFamily: 'Orbitron, monospace' }}>/100</div>
+        </div>
+        <div style={{ display: 'flex', gap: 3, marginBottom: 16 }}>
+          {Array.from({ length: 20 }).map((_, i) => {
+            const lit = Math.round((rallyScore / 100) * 20)
+            const pct = i / 20
+            const color = i < lit
+              ? pct < 0.4 ? 'rgba(180,80,220,1)' : pct < 0.7 ? 'rgba(255,110,199,1)' : 'rgba(0,229,255,1)'
+              : pct < 0.4 ? 'rgba(180,80,220,0.12)' : pct < 0.7 ? 'rgba(255,110,199,0.12)' : 'rgba(0,229,255,0.12)'
+            return (
+              <div key={i} style={{
+                flex: 1, height: 18, borderRadius: 2,
+                background: color,
+                boxShadow: i < lit ? `0 0 6px ${color}` : 'none',
+                transition: 'background 0.3s ease'
+              }} />
+            )
+          })}
+        </div>
+        <div style={{
+          fontFamily: 'Orbitron, monospace', fontSize: 10, letterSpacing: 2,
+          color: rallyScore >= 80 ? '#00e5ff' : rallyScore >= 60 ? '#ff6ec7' : rallyScore >= 40 ? '#b450dc' : 'rgba(255,255,255,0.3)',
+          marginBottom: 20
+        }}>
+          {rallyScore >= 80 ? '🔥 FULL SEND' :
+           rallyScore >= 60 ? '⚡ WE RALLYING' :
+           rallyScore >= 40 ? '🌊 WARMING UP' :
+           rallyScore >= 20 ? '😴 SLOW START' : '💤 DEAD HOUR'}
+        </div>
+
+        {/* Daily vibe log */}
+        {statsEntries.length > 0 && (
+          <>
+            <div style={{ fontFamily: 'Orbitron, monospace', fontSize: 9, letterSpacing: 2, color: 'rgba(255,255,255,0.3)', marginBottom: 10 }}>
+              TODAY'S VIBE LOG
+            </div>
+            {statsEntries.map(([key, mins]) => (
+              <div key={key} style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.05)'
+              }}>
+                <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>
+                  {VIBE_LABELS[key] ?? key}
+                </span>
+                <span style={{ fontSize: 12, color: '#ff6ec7', fontFamily: 'Orbitron, monospace' }}>
+                  {formatMinutes(mins)}
+                </span>
+              </div>
+            ))}
+          </>
+        )}
+        {statsEntries.length === 0 && (
+          <div className="card-sub">No vibe activity yet today</div>
+        )}
+      </div>
     </div>
   )
 }

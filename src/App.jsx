@@ -784,7 +784,7 @@ function updateRallyFromStats(dateKey, stats) {
 function useNow() {
   const [now, setNow] = useState(Date.now())
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 60 * 1000)
+    const id = setInterval(() => setNow(Date.now()), 10 * 1000)
     return () => clearInterval(id)
   }, [])
   return now
@@ -793,9 +793,9 @@ function useNow() {
 function getVibeOpacity(timestamp, now) {
   if (!timestamp) return 1
   const ageMinutes = (now - timestamp) / (1000 * 60)
-  if (ageMinutes > 120) return 0.25
-  if (ageMinutes > 60) return 0.5
-  if (ageMinutes > 30) return 0.75
+  if (ageMinutes > 3) return 0.25
+  if (ageMinutes > 2) return 0.5
+  if (ageMinutes > 1) return 0.75
   return 1
 }
 

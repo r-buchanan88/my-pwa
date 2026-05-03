@@ -113,10 +113,10 @@ function calcBeachScore(temp, precip, wind) {
 }
 
 function getBeachScores(forecast, dayIndex) {
-  if (!forecast?.hourly) return null
+  if (!forecast?.hourly?.temperature_2m || !forecast?.hourly?.precipitation_probability || !forecast?.hourly?.windspeed_10m) return null
   const hours = [9, 11, 13, 15]
   const baseIndex = dayIndex * 24
-  return hours.map(hour => {
+  const results = hours.map(hour => {
     const i = baseIndex + hour
     const temp = forecast.hourly.temperature_2m?.[i]
     const precip = forecast.hourly.precipitation_probability?.[i]
@@ -128,6 +128,7 @@ function getBeachScores(forecast, dayIndex) {
       score: calcBeachScore(temp, precip, wind)
     }
   }).filter(Boolean)
+  return results.length === 4 ? results : null
 }
 
 function getDailyAvgBeachScore(forecast, dayIndex) {
@@ -171,7 +172,7 @@ function formatTideTime(timeStr) {
 
 function BeachScoreCard({ forecast }) {
   const scores = getBeachScores(forecast, 0)
-  if (!forecast || !scores || scores.length === 0) return null
+  if (!forecast?.hourly || !scores || scores.length === 0) return null
 
   const maxScore = Math.max(...scores.map(s => s.score))
   const bestWindow = scores.find(s => s.score === maxScore)
@@ -410,9 +411,6 @@ function HomeTab() {
         </div>
 
         <BeachScoreCard forecast={forecast} />
-
-        {/* Activities */}
-        <div className="card"></div>
 
         {/* Activities */}
         <div className="card">

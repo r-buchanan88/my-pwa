@@ -941,10 +941,14 @@ function CrewTab() {
       if (label === 'Shots') {
         const shotsKey = `shots-bump-${dateKey}`
         if (!localStorage.getItem(shotsKey)) {
-          const rallyRef = ref(db, `crew/daily/${dateKey}/rally`)
-          onValue(rallyRef, snap => {
-            set(rallyRef, Math.min(100, (snap.val() || 0) + 10))
-          }, { onlyOnce: true })
+          push(ref(db, `crew/daily/${dateKey}/sessions`), {
+            vibe: 'shots',
+            deviceId,
+            start: Date.now(),
+            end: Date.now(),
+            minutes: 10,
+            isBump: true,
+          })
           localStorage.setItem(shotsKey, '1')
         }
       }
@@ -1042,12 +1046,12 @@ function CrewTab() {
             const count = entries.length
             const myVote = votes[deviceId]
             const selected = selectedVibe === label
-            const latestTimestamp = entries.length > 0
-              ? Math.min(...entries.map(([, v]) => v.timestamp || Infinity))
+            const earliestTimestamp = entries.length > 0
+              ? Math.min(...entries.filter(([, v]) => v.timestamp).map(([, v]) => v.timestamp))
               : null
-            const myTimestamp = myVote?.timestamp || null
+           const myTimestamp = myVote?.timestamp || null
             const opacity = myTimestamp ? getVibeOpacity(myTimestamp, now) : 1
-            const age = latestTimestamp ? getVibeAge(latestTimestamp, now) : null
+            const age = earliestTimestamp ? getVibeAge(earliestTimestamp, now) : null
             const faded = count > 0 && opacity < 1
             return (
               <div

@@ -1043,7 +1043,7 @@ function CrewTab() {
             const myVote = votes[deviceId]
             const selected = selectedVibe === label
             const latestTimestamp = entries.length > 0
-              ? Math.max(...entries.map(([, v]) => v.timestamp || 0))
+              ? Math.min(...entries.map(([, v]) => v.timestamp || Infinity))
               : null
             const myTimestamp = myVote?.timestamp || null
             const opacity = myTimestamp ? getVibeOpacity(myTimestamp, now) : 1

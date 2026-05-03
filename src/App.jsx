@@ -825,6 +825,9 @@ function CrewTab() {
   const [sessions, setSessions] = useState([])
   const [selectedVibe, setSelectedVibe] = useState(null)
   const now = useNow()
+  useEffect(() => {
+  console.log('now updated:', now)
+}, [now])
 
   const getTodayKey = () => {
     const n = new Date()
@@ -1046,6 +1049,7 @@ function CrewTab() {
             const selected = selectedVibe === label
             const myTimestamp = myVote?.timestamp || null
             const opacity = myTimestamp ? getVibeOpacity(myTimestamp, now) : 1
+if (myTimestamp) console.log('age minutes:', (now - myTimestamp) / (1000 * 60), 'opacity:', opacity)
             const age = myTimestamp ? getVibeAge(myTimestamp, now) : null
             const faded = myTimestamp && opacity < 1
             return (
@@ -1057,8 +1061,8 @@ function CrewTab() {
                   border: `1px solid ${selected ? 'rgba(0,229,255,0.5)' : 'rgba(255,255,255,0.08)'}`,
                   borderRadius: 14, padding: '12px 8px', cursor: 'pointer',
                   textAlign: 'center',
-                  opacity: selected ? 1 : count > 0 ? Math.max(0.2, opacity) : 0.25,
-                  transition: 'opacity 0.5s ease'
+                  opacity: count > 0 ? Math.max(0.2, opacity) : 0.25,
+                  transition: 'none'
                 }}
               >
                 <div style={{ fontSize: 28, marginBottom: 4 }}>{emoji}</div>

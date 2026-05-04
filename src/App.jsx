@@ -10,15 +10,79 @@ const TRIP = {
   checkout: new Date('2026-05-30T10:00:00'),
   address: '1113 New River Inlet Rd, North Topsail Beach, NC 28460',
   mapsUrl: 'https://maps.apple.com/?address=1113+New+River+Inlet+Rd,+North+Topsail+Beach,+NC+28460',
-  activities: [
-    { name: 'Taco Night', emoji: '🌮' },
-    { name: 'Murder Mystery Party', emoji: '🔍' },
-    { name: 'Fancy Dinner', emoji: '🍽️' },
-    { name: 'Birthday Celebrations', emoji: '🎂' },
-    { name: 'Pokey Stix', emoji: '🍕' },
-    { name: 'Disc Golf', emoji: '🥏' },
-    { name: 'Oysters', emoji: '🦪' },
-    { name: 'Party Punch', emoji: '🍹' },
+ activities: [
+    {
+      name: 'Taco Night',
+      emoji: '🌮',
+      links: [
+        { label: 'Signup Spreadsheet', url: 'https://docs.google.com/spreadsheets/d/1-40sK_3nW_aF1g6rtaKgyYfMnrFyxgz7i7hWq_OhM7E/edit?usp=sharing' },
+      ],
+    },
+    {
+      name: 'Murder Mystery Party',
+      emoji: '🔍',
+      links: [],
+    },
+    {
+      name: 'Fancy Dinner',
+      emoji: '🍽️',
+      links: [
+        { label: 'Beauchaines 211', url: 'https://maps.apple.com/?q=Beauchaines+211+Surf+City+NC' },
+        { label: 'Splash by the Sea', url: 'https://maps.apple.com/?q=Splash+by+the+Sea+North+Topsail+Beach+NC' },
+        { label: "Rick's Restaurant", url: 'https://maps.apple.com/?q=Ricks+Restaurant+Sneads+Ferry+NC' },
+        { label: 'River 128 Wilmington', url: 'https://www.river128.com' },
+      ],
+    },
+    {
+      name: 'Birthday Celebrations',
+      emoji: '🎂',
+      links: [],
+      isCelebration: true,
+    },
+    {
+      name: 'Pokey Stix',
+      emoji: '🍕',
+      links: [
+        { label: 'Recipe Link', url: 'https://onwardstate.com/2012/10/09/homemade-pokey-stix/' },
+      ],
+    },
+    {
+      name: 'Disc Golf',
+      emoji: '🥏',
+      links: [
+        { label: 'Surf City Course on UDisc', url: 'https://udisc.com/courses/surf-city-disc-golf-course-P7zL' },
+      ],
+    },
+    {
+      name: 'Oysters',
+      emoji: '🦪',
+      links: [
+        { label: 'NSea Oyster Co.', url: 'https://nseaoyster.com' },
+      ],
+    },
+    {
+      name: 'Party Punch',
+      emoji: '🍹',
+      links: [
+        { label: 'Recipe Video', url: 'https://youtu.be/5pMAmDthzDs?si=_00d1Mit2xf6oAH1' },
+      ],
+    },
+    {
+      name: 'Paddle Boarding',
+      emoji: '🏄',
+      links: [
+        { label: 'Topsail Surf & Cycle', url: 'https://topsailsurfandcycle.com/standup-paddleboard-rentals/' },
+        { label: 'Drop In Surf Shop', url: 'https://www.dropinsurfnc.com/kayak-paddleboard-rentals' },
+        { label: 'Topsail Island Watersports', url: 'https://surfcityjetskirentals.com/product/kayak-paddle-board-rentals/' },
+      ],
+    },
+    {
+      name: 'Pier Fishing',
+      emoji: '🎣',
+      links: [
+        { label: 'Seaview Fishing Pier', url: 'https://seaviewfishingpier.godaddysites.com/pier-house' },
+      ],
+   },
   ],
 }
 
@@ -279,6 +343,91 @@ function BeachScoreCard({ forecast }) {
   )
 }
 
+function ActivityModal({ activity, onClose }) {
+  if (!activity) return null
+
+  const isCelebration = activity.isCelebration
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 200,
+        background: 'rgba(0,0,0,0.7)',
+        display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+        backdropFilter: 'blur(4px)',
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: '100%', maxWidth: 480,
+          background: 'linear-gradient(135deg, #12002a 0%, #1e0040 100%)',
+          borderTop: '1px solid rgba(255,110,199,0.3)',
+          borderRadius: '24px 24px 0 0',
+          padding: '24px 20px 48px',
+        }}
+      >
+        {/* Handle */}
+        <div style={{
+          width: 36, height: 4, borderRadius: 2,
+          background: 'rgba(255,255,255,0.2)',
+          margin: '0 auto 20px'
+        }} />
+
+        {/* Title */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+          <span style={{ fontSize: 32 }}>{activity.emoji}</span>
+          <div style={{ fontFamily: 'Orbitron, monospace', fontSize: 14, color: '#fff', letterSpacing: 1 }}>
+            {activity.name}
+          </div>
+        </div>
+
+        {isCelebration ? (
+          <div style={{ textAlign: 'center', fontSize: 80, padding: '20px 0' }}>🥳</div>
+        ) : activity.links?.length === 0 ? (
+          <div className="card-sub">Links coming soon!</div>
+       ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {activity.links.map((link, i) => (<a
+              
+                key={i}
+                href={link.url}
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(255,110,199,0.2)',
+                  borderRadius: 12, padding: '12px 16px',
+                  color: '#ffd6f0', fontSize: 14, textDecoration: 'none',
+                }}
+              >
+                <span>{link.label}</span>
+                <span style={{ color: '#ff6ec7', fontSize: 18 }}>→</span>
+              </a>
+            ))}
+          </div>
+        )}
+
+        <button
+          onClick={onClose}
+          style={{
+            marginTop: 20, width: '100%',
+            background: 'rgba(255,255,255,0.06)',
+            border: '1px solid rgba(255,110,199,0.2)',
+            borderRadius: 12, padding: '12px',
+            color: 'rgba(255,255,255,0.5)', fontSize: 13,
+            cursor: 'pointer', fontFamily: 'Exo 2, sans-serif'
+          }}
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function HouseNeeds() {
   const [needs, setNeeds] = useState([])
   const [newNeed, setNewNeed] = useState('')
@@ -352,6 +501,7 @@ function HouseNeeds() {
 }
 function HomeTab() {
   const { data: forecast } = useForecast()
+  const [activeActivity, setActiveActivity] = useState(null)
   const [now, setNow] = useState(new Date())
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 60 * 1000)
@@ -417,13 +567,20 @@ function HomeTab() {
           <div className="card-label">Trip Activities</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 12px', marginTop: 4 }}>
             {TRIP.activities.map((a, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div
+                key={i}
+               onClick={() => setActiveActivity(a)}
+style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: (a.links?.length > 0 || a.isCelebration) ? 'pointer' : 'default' }}
+              >
                 <span style={{ fontSize: 18 }}>{a.emoji}</span>
                 <span style={{ fontSize: 13, color: '#ffd6f0' }}>{a.name}</span>
+                {(a.links?.length > 0 || a.isCelebration) && <span style={{ fontSize: 10, color: 'rgba(255,110,199,0.5)' }}>{'→'}</span>}
               </div>
             ))}
           </div>
         </div>
+
+        <ActivityModal activity={activeActivity} onClose={() => setActiveActivity(null)} />
         {/* HOUSE NEEDS */}
         <HouseNeeds />
       </div>
@@ -1160,6 +1317,7 @@ const RESTAURANTS = [
   { name: 'Spiaggia Ristobar', type: 'Italian', area: 'Sneads Ferry', rating: 4.6, phone: '910-741-0179', maps: 'https://maps.apple.com/?q=Spiaggia+Ristobar+Sneads+Ferry+NC' },
   { name: 'Lo-re-Lei Pub & Grill', type: 'Bar & Grill', area: 'Sneads Ferry', rating: 4.4, phone: '910-327-0900', maps: 'https://maps.apple.com/?q=Lo-re-Lei+Pub+Grill+Sneads+Ferry+NC' },
   { name: 'Voodoo Brewing Co', type: 'Brewery', area: 'Sneads Ferry', rating: 4.5, phone: '910-741-0155', maps: 'https://maps.apple.com/?q=Voodoo+Brewing+Sneads+Ferry+NC' },
+  { name: 'Shaka Taco 🤙', type: 'Tacos', area: 'Surf City', rating: 4.7, phone: '910-616-3118', maps: 'https://maps.apple.com/?q=Shaka+Taco+Surf+City+NC' },
   { name: 'Low Tide Steakhouse & SandBar', type: 'Steak & Seafood', area: 'Surf City', rating: 4.5, phone: '910-803-2304', maps: 'https://maps.apple.com/?q=Low+Tide+Steakhouse+Surf+City+NC' },
   { name: "Daddy Mac's Beach Grille", type: 'Seafood & American', area: 'Surf City', rating: 4.3, phone: '910-328-5577', maps: 'https://maps.apple.com/?q=Daddy+Macs+Beach+Grille+Surf+City+NC' },
   { name: 'Sears Landing', type: 'Seafood', area: 'Surf City', rating: 4.3, phone: '910-328-1312', maps: 'https://maps.apple.com/?q=Sears+Landing+Surf+City+NC' },

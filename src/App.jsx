@@ -1379,6 +1379,145 @@ function ExploreTab() {
   )
 }
 
+function getStreak(team, matches) {
+  const teamMatches = [...matches]
+    .filter(m => m.winner === team || m.loser === team)
+    .slice(0, 3)
+  if (teamMatches.length === 0) return null
+  let streak = 0
+  for (const m of teamMatches) {
+    if (m.winner === team) streak++
+    else break
+  }
+  if (streak >= 3) return { label: 'On Fire', emoji: '🔥' }
+  if (streak === 2) return { label: 'Heating Up', emoji: '🌶️' }
+  return null
+}
+
+function getMVP(matches) {
+  const today = new Date().toLocaleDateString([], { month: 'short', day: 'numeric' })
+  const todayMatches = matches.filter(m => m.date === today)
+  if (todayMatches.length === 0) return null
+
+  const wins = {}
+  for (const m of todayMatches) {
+    wins[m.winner] = (wins[m.winner] || 0) + 1
+  }
+
+  const maxWins = Math.max(...Object.values(wins))
+  const topTeams = Object.entries(wins).filter(([, w]) => w === maxWins).map(([t]) => t)
+
+  if (topTeams.length === 1) return { team: topTeams[0], wins: maxWins }
+
+  // Head-to-head tiebreaker between tied teams
+  if (topTeams.length === 2) {
+    const [a, b] = topTeams
+    const aWins = todayMatches.filter(m => m.winner === a && m.loser === b).length
+    const bWins = todayMatches.filter(m => m.winner === b && m.loser === a).length
+    if (aWins > bWins) return { team: a, wins: maxWins }
+    if (bWins > aWins) return { team: b, wins: maxWins }
+  }
+
+  // Still tied — show all tied teams
+  return { team: topTeams.join(' & '), wins: maxWins, tied: true }
+}
+
+function generateBracket(teams) {
+  const shuffled = [...teams].sort(() => Math.random() - 0.5)
+  const size = Math.pow(2, Math.ceil(Math.log2(shuffled.length)))
+  const padded = [...shuffled]
+  while (padded.length < size) padded.push(null) // byes
+
+  const matches = []
+  for (let i = 0; i < size; i += 2) {
+    matches.push({
+      id: `r1-${i}`,
+      teamA: padded[i],
+      teamB: padded[i + 1],
+      winner: padded[i + 1] === null ? padded[i] : null, // auto-advance on bye
+    })
+  }
+  return [{ round: 1, matches }]
+}
+
+function advanceBracket(bracket) {
+  const lastRound = bracket[bracket.length - 1]
+  const winners = lastRound.matches.map(m => m.winner).filter(Boolean)
+  if (winners.length <= 1) return bracket // tournament over
+  if (winners.length === lastRound.matches.length) {
+    const newMatches = []
+    for (let i = 0; i < winners.length; i += 2) {
+      newMatches.push({
+        id: `r${bracket.length + 1}-${i}`,
+        teamA: winners[i],
+        teamB: winners[i + 1] || null,
+        winner: winners[i + 1] === null ? winners[i] : null,
+      })
+    }
+    return [...bracket, { round: bracket.length + 1, matches: newMatches }]
+  }
+  return bracket
+}
+
+function HeadToHeadModal({ team, matches, onClose }) {
+  if (!team) return null
+  const opponents = {}
+  for (const m of matches) {
+    if (m.winner === team) {
+      opponents[m.loser] = opponents[m.loser] || { wins: 0, losses: 0 }
+      opponents[m.loser].wins++
+    } else if (m.loser === team) {
+      opponents[m.winner] = opponents[m.winner] || { wins: 0, losses: 0 }
+      opponents[m.winner].losses++
+    }
+  }
+  const entries = Object.entries(opponents).sort((a, b) => b[1].wins - a[1].wins)
+
+  return (
+    <div onClick={onClose} style={{
+      position: 'fixed', inset: 0, zIndex: 200,
+      background: 'rgba(0,0,0,0.7)',
+      display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+      backdropFilter: 'blur(4px)',
+    }}>
+      <div onClick={e => e.stopPropagation()} style={{
+        width: '100%', maxWidth: 480,
+        background: 'linear-gradient(135deg, #12002a 0%, #1e0040 100%)',
+        borderTop: '1px solid rgba(255,110,199,0.3)',
+        borderRadius: '24px 24px 0 0',
+        padding: '24px 20px 48px',
+      }}>
+        <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.2)', margin: '0 auto 20px' }} />
+        <div style={{ fontFamily: 'Orbitron, monospace', fontSize: 14, color: '#fff', letterSpacing: 1, marginBottom: 20 }}>
+          ⚔️ {team} — Head to Head
+        </div>
+        {entries.length === 0 && <div className="card-sub">No matches yet</div>}
+        {entries.map(([opponent, record]) => (
+          <div key={opponent} style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.06)'
+          }}>
+            <span style={{ fontSize: 14, color: '#ffd6f0' }}>{opponent}</span>
+            <span style={{ fontSize: 13 }}>
+              <span style={{ color: '#00e5ff' }}>{record.wins}W</span>
+              <span style={{ color: 'rgba(255,255,255,0.3)', margin: '0 4px' }}>·</span>
+              <span style={{ color: '#ff6ec7' }}>{record.losses}L</span>
+            </span>
+          </div>
+        ))}
+        <button onClick={onClose} style={{
+          marginTop: 20, width: '100%',
+          background: 'rgba(255,255,255,0.06)',
+          border: '1px solid rgba(255,110,199,0.2)',
+          borderRadius: 12, padding: '12px',
+          color: 'rgba(255,255,255,0.5)', fontSize: 13,
+          cursor: 'pointer', fontFamily: 'Exo 2, sans-serif'
+        }}>Close</button>
+      </div>
+    </div>
+  )
+}
+
 function GamesTab() {
   const [teams, setTeams] = useState([])
   const [matches, setMatches] = useState([])
@@ -1386,10 +1525,15 @@ function GamesTab() {
   const [winner, setWinner] = useState('')
   const [loser, setLoser] = useState('')
   const [confirmClear, setConfirmClear] = useState(false)
+  const [selectedTeam, setSelectedTeam] = useState(null)
+  const [tournament, setTournament] = useState(null)
+  const [showTournamentSetup, setShowTournamentSetup] = useState(false)
+  const [tournamentTeams, setTournamentTeams] = useState([])
 
   useEffect(() => {
     const teamsRef = ref(db, 'kubb/teams')
     const matchesRef = ref(db, 'kubb/matches')
+    const tournamentRef = ref(db, 'kubb/tournament')
     const unsubTeams = onValue(teamsRef, snap => {
       const val = snap.val()
       setTeams(val ? Object.values(val) : [])
@@ -1398,7 +1542,10 @@ function GamesTab() {
       const val = snap.val()
       setMatches(val ? Object.values(val).reverse() : [])
     })
-    return () => { unsubTeams(); unsubMatches() }
+    const unsubTournament = onValue(tournamentRef, snap => {
+      setTournament(snap.val() || null)
+    })
+    return () => { unsubTeams(); unsubMatches(); unsubTournament() }
   }, [])
 
   const addTeam = () => {
@@ -1421,8 +1568,7 @@ function GamesTab() {
   const logMatch = () => {
     if (!winner || !loser || winner === loser) return
     push(ref(db, 'kubb/matches'), {
-      winner,
-      loser,
+      winner, loser,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       date: new Date().toLocaleDateString([], { month: 'short', day: 'numeric' }),
     })
@@ -1435,39 +1581,92 @@ function GamesTab() {
     setConfirmClear(false)
   }
 
+  const startTournament = () => {
+    const bracket = generateBracket(tournamentTeams)
+    set(ref(db, 'kubb/tournament'), { teams: tournamentTeams, bracket, active: true })
+    setShowTournamentSetup(false)
+  }
+
+  const reportTournamentWinner = (roundIndex, matchIndex, winner) => {
+    const updated = JSON.parse(JSON.stringify(tournament))
+    updated.bracket[roundIndex].matches[matchIndex].winner = winner
+    const advanced = advanceBracket(updated.bracket)
+    updated.bracket = advanced
+    set(ref(db, 'kubb/tournament'), updated)
+    // Also log to match history
+    const match = tournament.bracket[roundIndex].matches[matchIndex]
+    const loser = match.teamA === winner ? match.teamB : match.teamA
+    push(ref(db, 'kubb/matches'), {
+      winner, loser,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      date: new Date().toLocaleDateString([], { month: 'short', day: 'numeric' }),
+    })
+  }
+
+  const endTournament = () => set(ref(db, 'kubb/tournament'), null)
+
+  const getHeadToHead = (teamA, teamB) => {
+    const wins = matches.filter(m => m.winner === teamA && m.loser === teamB).length
+    const losses = matches.filter(m => m.winner === teamB && m.loser === teamA).length
+    return { wins, losses }
+  }
+
   const standings = teams.map(team => {
     const wins = matches.filter(m => m.winner === team).length
     const losses = matches.filter(m => m.loser === team).length
-    return { team, wins, losses }
-  }).sort((a, b) => b.wins - a.wins || a.losses - b.losses)
+    const streak = getStreak(team, matches)
+    return { team, wins, losses, streak }
+  }).sort((a, b) => {
+    if (b.wins !== a.wins) return b.wins - a.wins
+    if (a.losses !== b.losses) return a.losses - b.losses
+    // Head-to-head tiebreaker
+    const h2h = getHeadToHead(a.team, b.team)
+    if (h2h.wins !== h2h.losses) return h2h.losses - h2h.wins
+    // Fall back to tied
+    return 0
+  })
+
+  const mvp = getMVP(matches)
 
   const inputStyle = {
     flex: 1, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,110,199,0.3)',
     borderRadius: 10, padding: '8px 12px', color: '#fff', fontSize: 13,
     outline: 'none', fontFamily: 'Exo 2, sans-serif'
   }
-
   const btnStyle = {
     background: 'linear-gradient(135deg, #ff6ec7, #00e5ff)', border: 'none',
     borderRadius: 10, padding: '8px 14px', color: '#0a0015',
     fontWeight: 700, fontSize: 16, cursor: 'pointer'
   }
-
   const selectStyle = { ...inputStyle, flex: 1, cursor: 'pointer' }
+
+  const tournamentWinner = tournament?.bracket
+    ? (() => {
+        const last = tournament.bracket[tournament.bracket.length - 1]
+        if (last?.matches?.length === 1 && last.matches[0].winner) return last.matches[0].winner
+        return null
+      })()
+    : null
 
   return (
     <div className="cards" style={{ paddingTop: 24 }}>
 
+      {/* MVP */}
+      {mvp && (
+        <div className="card" style={{ background: 'linear-gradient(135deg, #1a0030, #2a0050)', border: '1px solid rgba(255,199,0,0.3)' }}>
+          <div className="card-label" style={{ color: '#ffc800' }}>👑 Team of the Day</div>
+          <div style={{ fontSize: 22, color: '#fff', fontWeight: 700 }}>{mvp.team}</div>
+          <div style={{ fontSize: 12, color: 'rgba(255,199,0,0.7)', marginTop: 4 }}>{mvp.wins} win{mvp.wins !== 1 ? 's' : ''} today</div>
+        </div>
+      )}
+
+      {/* TEAMS */}
       <div className="card">
         <div className="card-label">⚔️ Teams</div>
         <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-          <input
-            value={newTeam}
-            onChange={e => setNewTeam(e.target.value)}
+          <input value={newTeam} onChange={e => setNewTeam(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && addTeam()}
-            placeholder="Team name..."
-            style={inputStyle}
-          />
+            placeholder="Team name..." style={inputStyle} />
           <button onClick={addTeam} style={btnStyle}>+</button>
         </div>
         {teams.length === 0 && <div className="card-sub">No teams yet — add some above</div>}
@@ -1485,6 +1684,7 @@ function GamesTab() {
         ))}
       </div>
 
+      {/* LOG MATCH */}
       {teams.length >= 2 && (
         <div className="card">
           <div className="card-label">🏆 Log a Match</div>
@@ -1503,47 +1703,162 @@ function GamesTab() {
                 {teams.filter(t => t !== winner).map(t => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
-            <button
-              onClick={logMatch}
-              disabled={!winner || !loser}
-              style={{
-                ...btnStyle,
-                opacity: (!winner || !loser) ? 0.4 : 1,
-                marginTop: 4, padding: '10px',
-                fontSize: 13, letterSpacing: 1,
-                fontFamily: 'Orbitron, monospace'
-              }}
-            >LOG MATCH</button>
+            <button onClick={logMatch} disabled={!winner || !loser}
+              style={{ ...btnStyle, opacity: (!winner || !loser) ? 0.4 : 1, marginTop: 4, padding: '10px', fontSize: 13, letterSpacing: 1, fontFamily: 'Orbitron, monospace' }}>
+              LOG MATCH
+            </button>
           </div>
         </div>
       )}
 
+      {/* LEADERBOARD */}
       {standings.length > 0 && (
         <div className="card">
           <div className="card-label">📊 Leaderboard</div>
-          {standings.map((s, i) => (
-            <div key={s.team} className="tide-row">
+         {standings.map((s, i) => {
+            const sameRecord = standings.filter(other => other.wins === s.wins && other.losses === s.losses)
+            const isTied = sameRecord.length > 1 && (() => {
+              // Only show as tied if head-to-head didn't resolve it
+              if (sameRecord.length === 2) {
+                const other = sameRecord.find(o => o.team !== s.team)
+                const h2h = getHeadToHead(s.team, other.team)
+                return h2h.wins === h2h.losses
+              }
+              return true // three-way+ tie always shows as tied
+            })()
+            const rank = standings.findIndex(other => other.wins === s.wins && other.losses === s.losses) + 1
+            return (
+            <div key={s.team} className="tide-row" onClick={() => setSelectedTeam(s.team)}
+              style={{ cursor: 'pointer' }}>
               <span style={{
                 fontFamily: 'Orbitron, monospace', fontSize: 10,
-                color: i === 0 ? '#ffc800' : i === 1 ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.3)',
+                color: rank === 1 ? '#ffc800' : rank === 2 ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.3)',
                 width: 20
-              }}>#{i + 1}</span>
-              <span style={{ flex: 1, fontSize: 14, color: i === 0 ? '#fff' : 'rgba(255,255,255,0.7)' }}>{s.team}</span>
+              }}>#{rank}{isTied ? '=' : ''}</span>
+              <span style={{ flex: 1, fontSize: 14, color: i === 0 ? '#fff' : 'rgba(255,255,255,0.7)' }}>
+                {s.team}
+                {s.streak && <span style={{ marginLeft: 6, fontSize: 12 }}>{s.streak.emoji}</span>}
+              </span>
               <span style={{ fontSize: 13 }}>
                 <span style={{ color: '#00e5ff' }}>{s.wins}W</span>
                 <span style={{ color: 'rgba(255,255,255,0.3)', margin: '0 4px' }}>·</span>
                 <span style={{ color: '#ff6ec7' }}>{s.losses}L</span>
               </span>
             </div>
-          ))}
+          )})}
+          <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.2)', fontFamily: 'Orbitron, monospace', letterSpacing: 1, marginTop: 12 }}>
+            TAP A TEAM FOR HEAD-TO-HEAD
+          </div>
         </div>
       )}
 
+      {/* TOURNAMENT */}
+      {!tournament && teams.length >= 2 && !showTournamentSetup && (
+        <div style={{ textAlign: 'center' }}>
+          <button onClick={() => { setTournamentTeams([...teams]); setShowTournamentSetup(true) }}
+            style={{ ...btnStyle, fontSize: 12, padding: '10px 20px', fontFamily: 'Orbitron, monospace', letterSpacing: 1 }}>
+            🏅 ENTER TOURNAMENT MODE
+          </button>
+        </div>
+      )}
+
+      {showTournamentSetup && (
+        <div className="card">
+          <div className="card-label">🏅 Tournament Setup</div>
+          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 12 }}>
+            Select participating teams:
+          </div>
+          {teams.map(t => (
+            <div key={t} className="activity-item" style={{ justifyContent: 'space-between' }}
+              onClick={() => setTournamentTeams(prev =>
+                prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]
+              )}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{
+                  width: 18, height: 18, borderRadius: 4, border: '2px solid rgba(255,110,199,0.5)',
+                  background: tournamentTeams.includes(t) ? 'linear-gradient(135deg, #ff6ec7, #00e5ff)' : 'transparent',
+                  flexShrink: 0
+                }} />
+                <div style={{ fontSize: 14, color: '#ffd6f0' }}>{t}</div>
+              </div>
+            </div>
+          ))}
+          <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+            <button onClick={startTournament} disabled={tournamentTeams.length < 2}
+              style={{ ...btnStyle, flex: 1, opacity: tournamentTeams.length < 2 ? 0.4 : 1, fontSize: 12, fontFamily: 'Orbitron, monospace' }}>
+              GENERATE BRACKET
+            </button>
+            <button onClick={() => setShowTournamentSetup(false)}
+              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,110,199,0.2)', borderRadius: 10, padding: '8px 14px', color: 'rgba(255,255,255,0.5)', fontSize: 12, cursor: 'pointer' }}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {tournament && (
+        <div className="card">
+          <div className="card-label">🏅 Tournament Bracket</div>
+          {tournamentWinner && (
+            <div style={{ textAlign: 'center', marginBottom: 16 }}>
+              <div style={{ fontSize: 32 }}>🏆</div>
+              <div style={{ fontSize: 18, color: '#ffc800', fontFamily: 'Orbitron, monospace', marginTop: 4 }}>{tournamentWinner}</div>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 4 }}>Tournament Champion</div>
+            </div>
+          )}
+          {tournament.bracket.map((round, ri) => (
+            <div key={ri} style={{ marginBottom: 20 }}>
+              <div style={{ fontFamily: 'Orbitron, monospace', fontSize: 9, letterSpacing: 2, color: '#00e5ff', marginBottom: 10 }}>
+                {round.matches.length === 1 ? 'FINAL' : round.matches.length === 2 ? 'SEMI-FINALS' : `ROUND ${round.round}`}
+              </div>
+              {round.matches.map((match, mi) => (
+                <div key={match.id} style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 12, padding: 12, marginBottom: 8 }}>
+                  {match.teamB === null ? (
+                    <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)' }}>
+                      {match.teamA} — <span style={{ color: '#00e5ff' }}>BYE</span>
+                    </div>
+                  ) : match.winner ? (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: 13, color: match.winner === match.teamA ? '#fff' : 'rgba(255,255,255,0.3)' }}>{match.teamA}</span>
+                      <span style={{ fontSize: 10, color: '#ffc800', fontFamily: 'Orbitron, monospace' }}>WINNER</span>
+                      <span style={{ fontSize: 13, color: match.winner === match.teamB ? '#fff' : 'rgba(255,255,255,0.3)' }}>{match.teamB}</span>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', textAlign: 'center', marginBottom: 4 }}>
+                        {match.teamA} vs {match.teamB}
+                      </div>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button onClick={() => reportTournamentWinner(ri, mi, match.teamA)}
+                          style={{ ...btnStyle, flex: 1, fontSize: 11, padding: '8px', fontFamily: 'Orbitron, monospace' }}>
+                          {match.teamA} WON
+                        </button>
+                        <button onClick={() => reportTournamentWinner(ri, mi, match.teamB)}
+                          style={{ ...btnStyle, flex: 1, fontSize: 11, padding: '8px', fontFamily: 'Orbitron, monospace' }}>
+                          {match.teamB} WON
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ))}
+          {tournamentWinner && (
+            <button onClick={endTournament} style={{
+              background: 'none', border: 'none', color: 'rgba(255,110,199,0.3)',
+              fontSize: 10, cursor: 'pointer', fontFamily: 'Orbitron, monospace', letterSpacing: 1, marginTop: 8
+            }}>END TOURNAMENT</button>
+          )}
+        </div>
+      )}
+
+      {/* MATCH HISTORY */}
       {matches.length > 0 && (
         <div className="card">
           <div className="card-label">📜 Match History</div>
           {matches.map((m, i) => (
-            <div key={i} className="tide-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
+            <div key={i} className="tide-row">
               <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
                 <span style={{ fontSize: 13, color: '#fff' }}>
                   <span style={{ color: '#00e5ff' }}>{m.winner}</span>
@@ -1557,6 +1872,7 @@ function GamesTab() {
         </div>
       )}
 
+      {/* RESET */}
       {(teams.length > 0 || matches.length > 0) && (
         <div style={{ textAlign: 'center', paddingBottom: 8 }}>
           {!confirmClear
@@ -1569,6 +1885,7 @@ function GamesTab() {
         </div>
       )}
 
+      <HeadToHeadModal team={selectedTeam} matches={matches} onClose={() => setSelectedTeam(null)} />
     </div>
   )
 }

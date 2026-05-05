@@ -1165,13 +1165,15 @@ function CrewTab() {
     weightedPoints += (VIBE_POINTS[key] ?? 0) * effectiveMins
   }
 
-  const participationScore = Math.min(1, totalMinutes / 840)
+const participationScore = Math.min(1, totalMinutes / 840)
   const positivityRaw = totalMinutes > 0 ? weightedPoints / totalMinutes : 0
   const positivityScore = (Math.max(-1, Math.min(2, positivityRaw)) + 1) / 3
   const rallyScore = Math.round((participationScore * 60) + (positivityScore * 40))
+  console.log('Rally calc:', { totalMinutes, weightedPoints, participationScore, positivityScore, rallyScore, sessions, vibeVotes })
 
   // Write rally score to Firebase
   useEffect(() => {
+    if (sessions.length === 0 && Object.keys(vibeVotes).length === 0) return
     set(ref(db, `crew/daily/${dateKey}/rally`), Math.min(100, Math.max(0, rallyScore)))
   }, [rallyScore])
 

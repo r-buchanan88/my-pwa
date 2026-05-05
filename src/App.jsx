@@ -1167,8 +1167,8 @@ function CrewTab() {
 
 const participationScore = Math.min(1, totalMinutes / 840)
   const positivityRaw = totalMinutes > 0 ? weightedPoints / totalMinutes : 0
-  const positivityScore = (Math.max(-1, Math.min(2, positivityRaw)) + 1) / 3
-  const rallyScore = Math.round((participationScore * 60) + (positivityScore * 40))
+  const positivityScore = totalMinutes > 0 ? (Math.max(-1, Math.min(2, positivityRaw)) + 1) / 3 : 0
+  const rallyScore = totalMinutes > 0 ? Math.round((participationScore * 60) + (positivityScore * 40)) : 0
   console.log('Rally calc:', { totalMinutes, weightedPoints, participationScore, positivityScore, rallyScore, sessions, vibeVotes })
 
   // Write rally score to Firebase

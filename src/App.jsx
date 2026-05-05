@@ -1097,7 +1097,7 @@ function CrewTab() {
       }
 
       // Shots immediate bump — once per device per day
-      if (label === 'Shots') {
+     if (label === 'Shots') {
         const shotsKey = `shots-bump-${dateKey}`
         if (!localStorage.getItem(shotsKey)) {
           push(ref(db, `crew/daily/${dateKey}/sessions`), {

@@ -165,9 +165,10 @@ function getTempScore(temp) {
 
 function getWindScore(wind) {
   if (wind >= 5 && wind <= 15) return 1.0
-  if ((wind > 15 && wind <= 18) || (wind >= 3 && wind < 5)) return 0.9
-  if ((wind > 18 && wind <= 24) || (wind >= 1 && wind < 3)) return 0.75
-  if ((wind > 24 && wind <= 30) || wind === 0) return 0.45
+  if (wind >= 0 && wind <= 4) return 0.85
+  if (wind > 15 && wind <= 18) return 0.9
+  if (wind > 18 && wind <= 24) return 0.75
+  if (wind > 24 && wind <= 30) return 0.45
   return 0.1
 }
 

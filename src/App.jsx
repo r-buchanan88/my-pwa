@@ -1100,14 +1100,15 @@ function CrewTab() {
      if (label === 'Shots') {
         const shotsKey = `shots-bump-${dateKey}`
         if (!localStorage.getItem(shotsKey)) {
-          push(ref(db, `crew/daily/${dateKey}/sessions`), {
+         push(ref(db, `crew/daily/${dateKey}/sessions`), {
             vibe: 'shots',
             deviceId,
             start: Date.now(),
             end: Date.now(),
             minutes: 10,
             isBump: true,
-          })
+          }).then(() => console.log('Bump session written successfully'))
+            .catch(e => console.error('Bump session write failed:', e))
           localStorage.setItem(shotsKey, '1')
         }
       }

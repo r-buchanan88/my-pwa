@@ -979,6 +979,7 @@ function getDeviceId() {
 const deviceId = getDeviceId()
 
 function CrewTab() {
+  const [shotsBump, setShotsBump] = useState(0)
   const [vibeVotes, setVibeVotes] = useState({})
   const [sessions, setSessions] = useState([])
   const [selectedVibe, setSelectedVibe] = useState(null)
@@ -1014,6 +1015,9 @@ function CrewTab() {
       const val = snap.val() || {}
       setSessions(Object.values(val))
     })
+
+    const bumpsRef = ref(db, `crew/daily/${dateKey}/shotsBumps`)
+    const unsubBumps = onValue(bumpsRef, snap => setShotsBump(snap.val() || 0))
 
     // Load this device's existing vote on mount
     onValue(vibeRef, snap => {
@@ -1059,7 +1063,7 @@ function CrewTab() {
     runCleanup()
     const cleanup = setInterval(runCleanup, 5 * 60 * 1000)
 
-    return () => { unsubVibes(); unsubSessions(); clearInterval(cleanup) }
+    return () => { unsubVibes(); unsubSessions(); unsubBumps(); clearInterval(cleanup) }
   }, [])
 
   const writeSession = (label, timestamp) => {
@@ -1100,15 +1104,10 @@ function CrewTab() {
      if (label === 'Shots') {
         const shotsKey = `shots-bump-${dateKey}`
         if (!localStorage.getItem(shotsKey)) {
-         push(ref(db, `crew/daily/${dateKey}/sessions`), {
-            vibe: 'shots',
-            deviceId,
-            start: Date.now(),
-            end: Date.now(),
-            minutes: 10,
-            isBump: true,
-          }).then(() => console.log('Bump session written successfully'))
-            .catch(e => console.error('Bump session write failed:', e))
+          const bumpsRef = ref(db, `crew/daily/${dateKey}/shotsBumps`)
+          onValue(bumpsRef, snap => {
+            set(bumpsRef, (snap.val() || 0) + 10)
+          }, { onlyOnce: true })
           localStorage.setItem(shotsKey, '1')
         }
       }
@@ -1118,13 +1117,14 @@ function CrewTab() {
     }
   }
 
-  // Calculate vibe log totals from completed sessions
+  // Vibe log — from completed sessions only
   const vibeTotals = sessions.reduce((acc, s) => {
+    if (s.isBump) return acc // exclude bump sessions from log
     acc[s.vibe] = (acc[s.vibe] || 0) + (s.minutes || 0)
     return acc
   }, {})
 
-  // Add currently active votes to totals (live, not yet written as sessions)
+  // Add currently active votes to vibe log totals
   for (const [vibeKey, vibeData] of Object.entries(vibeVotes)) {
     const votes = vibeData?.votes || {}
     for (const [, voteData] of Object.entries(votes)) {
@@ -1136,47 +1136,32 @@ function CrewTab() {
     }
   }
 
-  // Calculate rally score from sessions + active votes
-  const totalUniqueDevices = new Set([
-    ...sessions.map(s => s.deviceId),
-    ...Object.values(vibeVotes).flatMap(v =>
-      Object.keys(v?.votes || {})
-    )
-  ]).size
-
-  let totalMinutes = 0
-  let weightedPoints = 0
-  for (const [key, mins] of Object.entries(vibeTotals)) {
-    // Apply decay for inactive vibes
-    const hasActive = vibeVotes[key]?.votes &&
-      Object.values(vibeVotes[key].votes).some(v =>
-        v.timestamp && (Date.now() - v.timestamp) / (1000 * 60) <= 120
-      )
-    const hasBump = sessions.some(s => s.vibe === key && s.isBump)
-    const decayFactor = hasActive || hasBump ? 1 : Math.max(0,
-      1 - (sessions
-        .filter(s => s.vibe === key)
-        .reduce((latest, s) => Math.max(latest, s.end || 0), 0)
-        ? (Date.now() - sessions
-            .filter(s => s.vibe === key)
-            .reduce((latest, s) => Math.max(latest, s.end || 0), 0)) / (1000 * 60 * 60)
-        : 0)
-    )
-    const effectiveMins = mins * decayFactor
-    totalMinutes += effectiveMins
-    weightedPoints += (VIBE_POINTS[key] ?? 0) * effectiveMins
+  // Rally score — from active votes only + shots bumps
+  const VIBE_POINTS = {
+    brews_cruise: 2, shots: 2, party: 2,
+    beach: 0, pool: 0, food: 0,
+    nap: -1, board_games: -1, movie: -1,
   }
 
-const participationScore = Math.min(1, totalMinutes / 840)
-  const positivityRaw = totalMinutes > 0 ? weightedPoints / totalMinutes : 0
-  const positivityScore = totalMinutes > 0 ? (Math.max(-1, Math.min(2, positivityRaw)) + 1) / 3 : 0
-  const rallyScore = totalMinutes > 0 ? Math.round((participationScore * 60) + (positivityScore * 40)) : 0
-  console.log('Rally calc:', { totalMinutes, weightedPoints, participationScore, positivityScore, rallyScore, sessions, vibeVotes })
+  const activeVotes = Object.entries(vibeVotes).flatMap(([vibeKey, vibeData]) =>
+    Object.values(vibeData?.votes || {})
+      .filter(v => v.timestamp && (Date.now() - v.timestamp) / (1000 * 60) <= 120)
+      .map(() => vibeKey)
+  )
 
-  // Write rally score to Firebase
+  const participation = Math.min(1, activeVotes.length / 14)
+  const positivitySum = activeVotes.reduce((sum, vibeKey) => sum + (VIBE_POINTS[vibeKey] ?? 0), 0)
+  const positivityRaw = activeVotes.length > 0 ? positivitySum / (activeVotes.length * 2) : 0
+  const positivityClamped = Math.max(-0.5, Math.min(1, positivityRaw))
+
+  const baseRally = activeVotes.length > 0
+    ? Math.round(Math.cbrt(participation * ((positivityClamped + 0.5) / 1.5)) * 100)
+    : 0
+
+  const rallyScore = Math.min(100, baseRally + shotsBump)
+
   useEffect(() => {
-    if (sessions.length === 0 && Object.keys(vibeVotes).length === 0) return
-    set(ref(db, `crew/daily/${dateKey}/rally`), Math.min(100, Math.max(0, rallyScore)))
+    set(ref(db, `crew/daily/${dateKey}/rally`), rallyScore)
   }, [rallyScore])
 
   const formatMinutes = (mins) => {

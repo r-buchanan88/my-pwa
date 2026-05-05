@@ -1151,7 +1151,8 @@ function CrewTab() {
       Object.values(vibeVotes[key].votes).some(v =>
         v.timestamp && (Date.now() - v.timestamp) / (1000 * 60) <= 120
       )
-    const decayFactor = hasActive ? 1 : Math.max(0,
+    const hasBump = sessions.some(s => s.vibe === key && s.isBump)
+    const decayFactor = hasActive || hasBump ? 1 : Math.max(0,
       1 - (sessions
         .filter(s => s.vibe === key)
         .reduce((latest, s) => Math.max(latest, s.end || 0), 0)

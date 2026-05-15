@@ -1164,7 +1164,7 @@ function CrewTab() {
           })}
         </div>
         <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', fontFamily: 'Orbitron, monospace', letterSpacing: 1 }}>
-          VIBES FADE AFTER 30M · CLEAR AFTER 2H
+          VIBES FADE AFTER 30M · CLEAR AFTER 2H/SHOTS AFTER 1H
         </div>
       </div>
 

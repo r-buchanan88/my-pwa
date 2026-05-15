@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { db } from './firebase'
 import { ref, onValue, set, push, remove } from 'firebase/database'
 import './App.css'
@@ -1049,16 +1049,19 @@ function CrewTab() {
     }
   }
 
-  // Rally tick — runs every minute
+// Rally tick — runs every minute
+  const vibeVotesRef = useRef(vibeVotes)
+  useEffect(() => { vibeVotesRef.current = vibeVotes }, [vibeVotes])
+
   useEffect(() => {
     const tick = () => {
+      const currentVotes = vibeVotesRef.current
       const rallyRef = ref(db, `crew/daily/${dateKey}/rally`)
 
-      // Count active votes and their points
       let pointsPerMinute = 0
       let hasActiveVotes = false
 
-      for (const [vibeKey, vibeData] of Object.entries(vibeVotes)) {
+      for (const [vibeKey, vibeData] of Object.entries(currentVotes)) {
         const votes = vibeData?.votes || {}
         const points = RALLY_VIBE_POINTS[vibeKey] ?? 0
         const expiryMins = vibeKey === 'shots' ? SHOTS_EXPIRY_MINUTES : VIBE_EXPIRY_MINUTES
@@ -1073,12 +1076,12 @@ function CrewTab() {
         }
       }
 
-      // Apply decay if no active votes
       if (!hasActiveVotes) {
         pointsPerMinute = -RALLY_DECAY_RATE * BASE_UNIT
       }
 
-      // Use Firebase transaction to avoid race conditions
+      console.log('tick:', { pointsPerMinute, hasActiveVotes })
+
       import('firebase/database').then(({ runTransaction }) => {
         runTransaction(rallyRef, current => {
           const currentVal = current || 0
@@ -1090,7 +1093,7 @@ function CrewTab() {
 
     const interval = setInterval(tick, 60 * 1000)
     return () => clearInterval(interval)
-  }, [vibeVotes, dateKey])
+  }, [dateKey])
 
   // Read rally score from Firebase for display
   const [rallyScore, setRallyScore] = useState(0)

@@ -859,86 +859,6 @@ const VIBES = [
   { emoji: '🍺', label: 'Brews Cruise' },
 ]
 
-function usePassiveAccumulation(selectedVibe, vibeVotes, getTodayKey) {
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const dateKey = getTodayKey()
-
-      // Each device only accumulates its own active vote
-      if (!selectedVibe) return
-      const key = selectedVibe.toLowerCase().replace(/[^a-z0-9]/g, '_')
-      const myVoteRef = ref(db, `crew/vibes/${key}/votes/${deviceId}`)
-
-      onValue(myVoteRef, snap => {
-        const vote = snap.val()
-        if (!vote?.timestamp) return
-        const ageMinutes = (Date.now() - vote.timestamp) / (1000 * 60)
-        if (ageMinutes > 120) return
-
-        // Add 5 minutes for this device's vote
-        const statsRef = ref(db, `crew/daily/${dateKey}/stats/${key}/totalMinutes`)
-        onValue(statsRef, snap2 => {
-          set(statsRef, (snap2.val() || 0) + 5)
-        }, { onlyOnce: true })
-
-        // Recalculate rally from current stats
-        const allStatsRef = ref(db, `crew/daily/${dateKey}/stats`)
-        onValue(allStatsRef, snap3 => {
-          const stats = snap3.val() || {}
-          const VIBE_POINTS = {
-            brews_cruise: 2, shots: 2, party: 2,
-            beach: 0, pool: 0, food: 0,
-            nap: -1, board_games: -1, movie: -1,
-          }
-          let totalMinutes = 0
-          let weightedPoints = 0
-          for (const [k, val] of Object.entries(stats)) {
-            const rawMins = val.totalMinutes || 0
-            const hasActive = vibeVotes[k]?.votes &&
-              Object.values(vibeVotes[k].votes).some(v =>
-                v.timestamp && (Date.now() - v.timestamp) / (1000 * 60) <= 120
-              )
-            const decayedMins = hasActive ? rawMins : Math.max(0, rawMins - 10)
-            totalMinutes += decayedMins
-            weightedPoints += (VIBE_POINTS[k] ?? 0) * decayedMins
-          }
-          const participationScore = Math.min(1, totalMinutes / 840)
-          const positivityRaw = totalMinutes > 0 ? weightedPoints / totalMinutes : 0
-          const positivityScore = (Math.max(-1, Math.min(2, positivityRaw)) + 1) / 3
-          const rally = Math.round((participationScore * 60) + (positivityScore * 40))
-          set(ref(db, `crew/daily/${dateKey}/rally`), Math.min(100, Math.max(0, rally)))
-        }, { onlyOnce: true })
-      }, { onlyOnce: true })
-    }, 5 * 60 * 1000)
-
-    return () => clearInterval(interval)
-  }, [vibeVotes])
-}
-
-function updateRallyFromStats(dateKey, stats) {
-  const VIBE_POINTS = {
-    brews_cruise: 2, shots: 2, party: 2,
-    beach: 0, pool: 0, food: 0,
-    nap: -1, board_games: -1, movie: -1,
-  }
-
-  let totalMinutes = 0
-  let weightedPoints = 0
-
-  for (const [key, val] of Object.entries(stats)) {
-    const mins = val.totalMinutes || 0
-    totalMinutes += mins
-    weightedPoints += (VIBE_POINTS[key] ?? 0) * mins
-  }
-
-  const participationScore = Math.min(1, totalMinutes / 840)
-  const positivityRaw = totalMinutes > 0 ? weightedPoints / totalMinutes : 0
-  const positivityScore = (Math.max(-1, Math.min(2, positivityRaw)) + 1) / 3
-  const rally = Math.round((participationScore * 60) + (positivityScore * 40))
-
-  set(ref(db, `crew/daily/${dateKey}/rally`), Math.min(100, Math.max(0, rally)))
-}
-
 function useNow() {
   const [now, setNow] = useState(Date.now())
   useEffect(() => {
@@ -999,9 +919,6 @@ function CrewTab() {
   const [sessions, setSessions] = useState([])
   const [selectedVibe, setSelectedVibe] = useState(null)
   const now = useNow()
-  useEffect(() => {
-  console.log('now updated:', now)
-}, [now])
 
   const getTodayKey = () => {
     const n = new Date()
@@ -1012,11 +929,6 @@ function CrewTab() {
 
   const dateKey = getTodayKey()
 
-  const VIBE_POINTS = {
-    brews_cruise: 2, shots: 2, party: 2,
-    beach: 0, pool: 0, food: 0,
-    nap: -1, board_games: -1, movie: -1,
-  }
 
   useEffect(() => {
     const vibeRef = ref(db, 'crew/vibes')

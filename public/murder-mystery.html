@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>The First Annual Heroes Summit</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet"/>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #0a0015;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Exo 2', sans-serif;
+      overflow-x: hidden;
+    }
+
+    .container {
+      max-width: 480px;
+      width: 100%;
+      padding: 40px 20px 60px;
+      text-align: center;
+    }
+
+    .eyebrow {
+      font-family: 'Orbitron', monospace;
+      font-size: 10px;
+      letter-spacing: 4px;
+      color: #ff6ec7;
+      text-transform: uppercase;
+      margin-bottom: 24px;
+      opacity: 0.8;
+    }
+
+    .invitation-wrapper {
+      position: relative;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow:
+        0 0 0 1px rgba(255, 110, 199, 0.3),
+        0 0 40px rgba(255, 110, 199, 0.15),
+        0 0 80px rgba(0, 229, 255, 0.08);
+      margin-bottom: 32px;
+      animation: glow 3s ease-in-out infinite alternate;
+    }
+
+    @keyframes glow {
+      from { box-shadow: 0 0 0 1px rgba(255,110,199,0.3), 0 0 40px rgba(255,110,199,0.15), 0 0 80px rgba(0,229,255,0.08); }
+      to   { box-shadow: 0 0 0 1px rgba(0,229,255,0.4),   0 0 60px rgba(0,229,255,0.2),   0 0 100px rgba(255,110,199,0.12); }
+    }
+
+    .invitation-img {
+      width: 100%;
+      display: block;
+    }
+
+    .details {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+
+    .detail-card {
+      background: linear-gradient(135deg, #12002a, #1e0040);
+      border: 1px solid rgba(255, 110, 199, 0.2);
+      border-radius: 14px;
+      padding: 14px 18px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .detail-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, #ff6ec7, #00e5ff);
+    }
+
+    .detail-label {
+      font-family: 'Orbitron', monospace;
+      font-size: 9px;
+      letter-spacing: 2px;
+      color: #00e5ff;
+      margin-bottom: 4px;
+    }
+
+    .detail-value {
+      font-size: 15px;
+      color: #ffd6f0;
+      font-weight: 600;
+    }
+
+    .warning {
+      font-family: 'Orbitron', monospace;
+      font-size: 10px;
+      letter-spacing: 2px;
+      color: rgba(255, 110, 199, 0.4);
+      line-height: 1.8;
+    }
+
+    .back-btn {
+      display: inline-block;
+      margin-top: 24px;
+      background: linear-gradient(135deg, #ff6ec7, #00e5ff);
+      border: none;
+      border-radius: 12px;
+      padding: 12px 28px;
+      color: #0a0015;
+      font-family: 'Orbitron', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .stars {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      pointer-events: none;
+      z-index: -1;
+      overflow: hidden;
+    }
+
+    .star {
+      position: absolute;
+      width: 2px;
+      height: 2px;
+      background: #ff6ec7;
+      border-radius: 50%;
+      animation: twinkle var(--d) ease-in-out infinite alternate;
+      opacity: 0;
+    }
+
+    @keyframes twinkle {
+      from { opacity: 0; }
+      to   { opacity: 0.6; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Starfield -->
+  <div class="stars" id="stars"></div>
+
+  <div class="container">
+    <div class="eyebrow">⚡ Rally Crew Presents ⚡</div>
+
+    <div class="invitation-wrapper">
+      <img class="invitation-img" src="invitation.png" alt="Murder Mystery Invitation"/>
+    </div>
+
+    <div class="warning">
+      MORE DETAILS TO FOLLOW<br/>
+      WHAT COULD POSSIBLY GO WRONG?
+    </div>
+
+    <a class="back-btn" href="javascript:history.back()">← BACK TO APP</a>
+  </div>
+
+  <script>
+    // Generate starfield
+    const container = document.getElementById('stars')
+    for (let i = 0; i < 60; i++) {
+      const star = document.createElement('div')
+      star.className = 'star'
+      star.style.left = Math.random() * 100 + '%'
+      star.style.top = Math.random() * 100 + '%'
+      star.style.setProperty('--d', (2 + Math.random() * 4) + 's')
+      star.style.animationDelay = (Math.random() * 4) + 's'
+      star.style.background = Math.random() > 0.5 ? '#ff6ec7' : '#00e5ff'
+      container.appendChild(star)
+    }
+  </script>
+
+</body>
+</html>

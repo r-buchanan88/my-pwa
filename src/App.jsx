@@ -147,19 +147,20 @@ function useNoaaTides() {
 
 // --- BEACH SCORE ---
 function getPrecipScore(prob) {
-  if (prob <= 10) return 1.0
-  if (prob <= 25) return 0.75
-  if (prob <= 40) return 0.45
-  if (prob <= 60) return 0.2
-  if (prob <= 80) return 0.08
+  if (prob <= 5) return 1.0
+  if (prob <= 10) return 0.88
+  if (prob <= 20) return 0.75
+  if (prob <= 35) return 0.45
+  if (prob <= 55) return 0.2
+  if (prob <= 75) return 0.08
   return 0.02
 }
 
 function getTempScore(temp) {
-  if (temp >= 80 && temp <= 88) return 1.0
-  if ((temp >= 75 && temp < 80) || (temp > 88 && temp <= 93)) return 0.8
-  if ((temp >= 70 && temp < 75) || (temp > 93 && temp <= 98)) return 0.55
-  if ((temp >= 65 && temp < 70) || (temp > 98 && temp <= 103)) return 0.3
+  if (temp >= 82 && temp <= 87) return 1.0
+  if ((temp >= 78 && temp < 82) || (temp > 87 && temp <= 92)) return 0.8
+  if ((temp >= 73 && temp < 78) || (temp > 92 && temp <= 97)) return 0.55
+  if ((temp >= 68 && temp < 73) || (temp > 97 && temp <= 102)) return 0.3
   return 0.1
 }
 

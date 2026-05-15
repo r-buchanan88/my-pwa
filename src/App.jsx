@@ -156,12 +156,22 @@ function useNoaaTides() {
 
 // --- BEACH SCORE ---
 function getPrecipScore(prob) {
-  if (prob <= 5) return 1.0
+  if (prob <= 5) return 1.00
   if (prob <= 10) return 0.88
+  if (prob <= 15) return 0.82
   if (prob <= 20) return 0.75
-  if (prob <= 35) return 0.45
-  if (prob <= 55) return 0.2
+  if (prob <= 25) return 0.65
+  if (prob <= 30) return 0.55
+  if (prob <= 35) return 0.50
+  if (prob <= 40) return 0.45
+  if (prob <= 45) return 0.38
+  if (prob <= 50) return 0.30
+  if (prob <= 55) return 0.25
+  if (prob <= 60) return 0.20
+  if (prob <= 65) return 0.15
+  if (prob <= 70) return 0.12
   if (prob <= 75) return 0.08
+  if (prob <= 80) return 0.05
   return 0.02
 }
 

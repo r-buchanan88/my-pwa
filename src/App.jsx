@@ -947,6 +947,22 @@ function useNow() {
   }, [])
   return now
 }
+// --- RALLY SYSTEM ---
+const BASE_UNIT = (100 / 14) / 120 // pts per device per minute
+const RALLY_VIBE_POINTS = {
+  brews_cruise: 2,
+  party: 2,
+  shots: 3,
+  beach: 0,
+  pool: 0,
+  food: 0,
+  nap: -1,
+  board_games: -1,
+  movie: -1,
+}
+const RALLY_DECAY_RATE = 3.5
+const SHOTS_EXPIRY_MINUTES = 60
+const VIBE_EXPIRY_MINUTES = 120
 
 function getVibeOpacity(timestamp, now) {
   if (!timestamp) return 1
@@ -979,7 +995,6 @@ function getDeviceId() {
 const deviceId = getDeviceId()
 
 function CrewTab() {
-  const [shotsBump, setShotsBump] = useState(0)
   const [vibeVotes, setVibeVotes] = useState({})
   const [sessions, setSessions] = useState([])
   const [selectedVibe, setSelectedVibe] = useState(null)
@@ -1016,9 +1031,6 @@ function CrewTab() {
       setSessions(Object.values(val))
     })
 
-    const bumpsRef = ref(db, `crew/daily/${dateKey}/shotsBumps`)
-    const unsubBumps = onValue(bumpsRef, snap => setShotsBump(snap.val() || 0))
-
     // Load this device's existing vote on mount
     onValue(vibeRef, snap => {
       const val = snap.val() || {}
@@ -1040,10 +1052,11 @@ function CrewTab() {
         for (const [vibeKey, vibeData] of Object.entries(val)) {
           const votes = vibeData?.votes || {}
           for (const [dKey, voteData] of Object.entries(votes)) {
+            const expiryMins = vibeKey === 'shots' ? SHOTS_EXPIRY_MINUTES : VIBE_EXPIRY_MINUTES
             const ageMinutes = voteData.timestamp
               ? (Date.now() - voteData.timestamp) / (1000 * 60)
               : 999
-            if (ageMinutes > 120) {
+            if (ageMinutes > expiryMins) {
               // Write completed session before clearing
               const mins = Math.min(120, Math.round(ageMinutes))
               push(ref(db, `crew/daily/${dateKey}/sessions`), {
@@ -1063,7 +1076,7 @@ function CrewTab() {
     runCleanup()
     const cleanup = setInterval(runCleanup, 5 * 60 * 1000)
 
-    return () => { unsubVibes(); unsubSessions(); unsubBumps(); clearInterval(cleanup) }
+    return () => { unsubVibes(); unsubSessions(); clearInterval(cleanup) }
   }, [])
 
   const writeSession = (label, timestamp) => {
@@ -1100,26 +1113,13 @@ function CrewTab() {
         }, { onlyOnce: true })
       }
 
-      // Shots immediate bump — once per device per day
-     if (label === 'Shots') {
-        const shotsKey = `shots-bump-${dateKey}`
-        if (!localStorage.getItem(shotsKey)) {
-          const bumpsRef = ref(db, `crew/daily/${dateKey}/shotsBumps`)
-          onValue(bumpsRef, snap => {
-            set(bumpsRef, (snap.val() || 0) + 10)
-          }, { onlyOnce: true })
-          localStorage.setItem(shotsKey, '1')
-        }
-      }
-
       set(ref(db, `crew/vibes/${key}/votes/${deviceId}`), { timestamp: Date.now() })
       setSelectedVibe(label)
     }
   }
 
-  // Vibe log — from completed sessions only
+ // Vibe log — from completed sessions only
   const vibeTotals = sessions.reduce((acc, s) => {
-    if (s.isBump) return acc // exclude bump sessions from log
     acc[s.vibe] = (acc[s.vibe] || 0) + (s.minutes || 0)
     return acc
   }, {})
@@ -1129,40 +1129,66 @@ function CrewTab() {
     const votes = vibeData?.votes || {}
     for (const [, voteData] of Object.entries(votes)) {
       if (!voteData?.timestamp) continue
+      const expiryMins = vibeKey === 'shots' ? SHOTS_EXPIRY_MINUTES : VIBE_EXPIRY_MINUTES
       const ageMinutes = (Date.now() - voteData.timestamp) / (1000 * 60)
-      if (ageMinutes <= 120) {
+      if (ageMinutes <= expiryMins) {
         vibeTotals[vibeKey] = (vibeTotals[vibeKey] || 0) + Math.round(ageMinutes)
       }
     }
   }
 
-  // Rally score — from active votes only + shots bumps
-  const VIBE_POINTS = {
-    brews_cruise: 2, shots: 2, party: 2,
-    beach: 0, pool: 0, food: 0,
-    nap: -1, board_games: -1, movie: -1,
-  }
-
-  const activeVotes = Object.entries(vibeVotes).flatMap(([vibeKey, vibeData]) =>
-    Object.values(vibeData?.votes || {})
-      .filter(v => v.timestamp && (Date.now() - v.timestamp) / (1000 * 60) <= 120)
-      .map(() => vibeKey)
-  )
-
-  const participation = Math.min(1, activeVotes.length / 14)
-  const positivitySum = activeVotes.reduce((sum, vibeKey) => sum + (VIBE_POINTS[vibeKey] ?? 0), 0)
-  const positivityRaw = activeVotes.length > 0 ? positivitySum / (activeVotes.length * 2) : 0
-  const positivityClamped = Math.max(-0.5, Math.min(1, positivityRaw))
-
-  const baseRally = activeVotes.length > 0
-    ? Math.round(Math.cbrt(participation * ((positivityClamped + 0.5) / 1.5)) * 100)
-    : 0
-
-  const rallyScore = Math.min(100, baseRally + shotsBump)
-
+  // Rally tick — runs every minute
   useEffect(() => {
-    set(ref(db, `crew/daily/${dateKey}/rally`), rallyScore)
-  }, [rallyScore])
+    const tick = () => {
+      const rallyRef = ref(db, `crew/daily/${dateKey}/rally`)
+
+      // Count active votes and their points
+      let pointsPerMinute = 0
+      let hasActiveVotes = false
+
+      for (const [vibeKey, vibeData] of Object.entries(vibeVotes)) {
+        const votes = vibeData?.votes || {}
+        const points = RALLY_VIBE_POINTS[vibeKey] ?? 0
+        const expiryMins = vibeKey === 'shots' ? SHOTS_EXPIRY_MINUTES : VIBE_EXPIRY_MINUTES
+
+        for (const [, voteData] of Object.entries(votes)) {
+          if (!voteData?.timestamp) continue
+          const ageMinutes = (Date.now() - voteData.timestamp) / (1000 * 60)
+          if (ageMinutes <= expiryMins) {
+            pointsPerMinute += points * BASE_UNIT
+            hasActiveVotes = true
+          }
+        }
+      }
+
+      // Apply decay if no active votes
+      if (!hasActiveVotes) {
+        pointsPerMinute = -RALLY_DECAY_RATE * BASE_UNIT
+      }
+
+      // Use Firebase transaction to avoid race conditions
+      import('firebase/database').then(({ runTransaction }) => {
+        runTransaction(rallyRef, current => {
+          const currentVal = current || 0
+          const newVal = currentVal + pointsPerMinute
+          return Math.min(100, Math.max(0, newVal))
+        })
+      })
+    }
+
+    const interval = setInterval(tick, 60 * 1000)
+    return () => clearInterval(interval)
+  }, [vibeVotes, dateKey])
+
+  // Read rally score from Firebase for display
+  const [rallyScore, setRallyScore] = useState(0)
+  useEffect(() => {
+    const rallyRef = ref(db, `crew/daily/${dateKey}/rally`)
+    const unsub = onValue(rallyRef, snap => {
+      setRallyScore(Math.ceil(snap.val() || 0))
+    })
+    return () => unsub()
+  }, [dateKey])
 
   const formatMinutes = (mins) => {
     if (mins < 60) return `${Math.round(mins)}m`

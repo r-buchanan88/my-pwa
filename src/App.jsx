@@ -263,12 +263,16 @@ function BeachScoreCard({ forecast }) {
   // Shaded area under line
   const areaPath = `${linePath} L ${xPos(scores.length - 1)} ${padT + innerH} L ${xPos(0)} ${padT + innerH} Z`
 
-  // Best window shading — find best consecutive pair
-  let bestPairStart = 0
+  // Best window shading — find best consecutive pair where both hours score >= 8.1
+  const WINDOW_THRESHOLD = 8.1
+  let bestPairStart = -1
   let bestPairScore = -1
   for (let i = 0; i < scores.length - 1; i++) {
-    const avg = (scores[i].score + scores[i + 1].score) / 2
-    if (avg > bestPairScore) { bestPairScore = avg; bestPairStart = i }
+    const bothQualify = scores[i].score >= WINDOW_THRESHOLD && scores[i + 1].score >= WINDOW_THRESHOLD
+    if (bothQualify) {
+      const avg = (scores[i].score + scores[i + 1].score) / 2
+      if (avg > bestPairScore) { bestPairScore = avg; bestPairStart = i }
+    }
   }
   const shadeX1 = xPos(bestPairStart)
   const shadeX2 = xPos(bestPairStart + 1)
@@ -338,9 +342,15 @@ function BeachScoreCard({ forecast }) {
         </svg>
       </div>
 
-      <div style={{ fontSize: 10, color: 'rgba(0,229,255,0.5)', fontFamily: 'Orbitron, monospace', letterSpacing: 1 }}>
-        BEST WINDOW · {scores[bestPairStart].label}–{scores[bestPairStart + 1].label}
-      </div>
+      {bestPairStart >= 0 ? (
+        <div style={{ fontSize: 10, color: 'rgba(0,229,255,0.5)', fontFamily: 'Orbitron, monospace', letterSpacing: 1 }}>
+          BEST WINDOW · {scores[bestPairStart].label}–{scores[bestPairStart + 1].label}
+        </div>
+      ) : (
+        <div style={{ fontSize: 10, color: 'rgba(255,110,199,0.5)', fontFamily: 'Orbitron, monospace', letterSpacing: 1 }}>
+          BEST HOUR · {bestWindow?.label}
+        </div>
+      )}
     </div>
   )
 }

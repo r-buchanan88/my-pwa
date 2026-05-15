@@ -873,10 +873,10 @@ const RALLY_VIBE_POINTS = {
   brews_cruise: 2,
   party: 2,
   shots: 3,
-  beach: 0,
-  pool: 0,
+  beach: 1,
+  pool: 1,
   food: 0,
-  nap: -1,
+  nap: -2,
   board_games: -1,
   movie: -1,
 }

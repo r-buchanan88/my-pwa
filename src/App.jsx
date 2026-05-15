@@ -87,7 +87,7 @@ const TRIP = {
       name: 'Board Games',
       emoji: '🎲',
       links: [
-        { label: 'Game Tracker', url: 'https://docs.google.com/spreadsheets/d/1-40sK_3nW_aF1g6rtaKgyYfMnrFyxgz7i7hWq_OhM7E/edit?gid=426212185#gid=426212185' },
+        { label: 'Game packing sign-up', url: 'https://docs.google.com/spreadsheets/d/1-40sK_3nW_aF1g6rtaKgyYfMnrFyxgz7i7hWq_OhM7E/edit?gid=426212185#gid=426212185' },
       ],
     },
   ],

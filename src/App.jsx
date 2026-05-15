@@ -278,7 +278,14 @@ function BeachScoreCard({ forecast }) {
   const shadeX2 = xPos(bestPairStart + 1)
 
   const scoreColor = maxScore >= 8 ? '#00e5ff' : maxScore >= 6 ? '#ff6ec7' : maxScore >= 4 ? '#ffc800' : '#ff4444'
-
+// Precipitation data for the sparkline
+  const precipData = [9, 11, 13, 15].map(hour => {
+    const i = hour
+    return forecast?.hourly?.precipitation_probability?.[i] ?? null
+  })
+  const precipPath = precipData.every(p => p != null)
+    ? precipData.map((p, i) => `${i === 0 ? 'M' : 'L'} ${xPos(i)} ${yPos(p / 10)}`).join(' ')
+    : null
   return (
     <div className="card">
       <div className="card-label">🏖️ Today's Beach Score</div>
@@ -291,26 +298,20 @@ function BeachScoreCard({ forecast }) {
       <div style={{ margin: '12px 0 4px' }}>
         <svg width="100%" viewBox={`0 0 ${chartW} ${chartH}`} style={{ overflow: 'visible' }}>
           {/* Best window shading */}
-          <rect
-            x={shadeX1}
-            y={padT}
-            width={shadeX2 - shadeX1}
-            height={innerH}
-            fill="rgba(0, 229, 255, 0.08)"
-            rx="4"
-          />
-          <rect
-            x={shadeX1}
-            y={padT}
-            width={shadeX2 - shadeX1}
-            height={innerH}
-            fill="none"
-            stroke="rgba(0, 229, 255, 0.2)"
-            strokeWidth="1"
-            rx="4"
-          />
+          {bestPairStart >= 0 && (
+            <>
+              <rect x={xPos(bestPairStart)} y={padT} width={xPos(bestPairStart + 1) - xPos(bestPairStart)} height={innerH} fill="rgba(0,229,255,0.08)" rx="4"/>
+              <rect x={xPos(bestPairStart)} y={padT} width={xPos(bestPairStart + 1) - xPos(bestPairStart)} height={innerH} fill="none" stroke="rgba(0,229,255,0.2)" strokeWidth="1" rx="4"/>
+            </>
+          )}
 
-          {/* Area fill under line */}
+          {/* Reference lines */}
+          <line x1={padL} y1={yPos(10)} x2={chartW - padR} y2={yPos(10)} stroke="rgba(255,255,255,0.08)" strokeWidth="1" strokeDasharray="3 3"/>
+          <line x1={padL} y1={yPos(5)} x2={chartW - padR} y2={yPos(5)} stroke="rgba(255,255,255,0.08)" strokeWidth="1" strokeDasharray="3 3"/>
+          <text x={padL - 2} y={yPos(10) + 3} fontSize="7" fill="rgba(255,255,255,0.2)" textAnchor="end" fontFamily="Orbitron, monospace">10</text>
+          <text x={padL - 2} y={yPos(5) + 3} fontSize="7" fill="rgba(255,255,255,0.2)" textAnchor="end" fontFamily="Orbitron, monospace">5</text>
+
+          {/* Area fill under beach score line */}
           <defs>
             <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor={scoreColor} stopOpacity="0.3"/>
@@ -319,7 +320,12 @@ function BeachScoreCard({ forecast }) {
           </defs>
           <path d={areaPath} fill="url(#areaGrad)"/>
 
-          {/* Line */}
+          {/* Precip line */}
+          {precipPath && (
+            <path d={precipPath} fill="none" stroke="rgba(50,220,120,0.8)" strokeWidth="1.5" strokeDasharray="4 3" strokeLinejoin="round" strokeLinecap="round"/>
+          )}
+
+          {/* Beach score line */}
           <path d={linePath} fill="none" stroke={scoreColor} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/>
 
           {/* Dots */}
@@ -329,15 +335,7 @@ function BeachScoreCard({ forecast }) {
 
           {/* Time labels */}
           {scores.map((s, i) => (
-            <text
-              key={i}
-              x={xPos(i)}
-              y={chartH}
-              textAnchor="middle"
-              fontSize="9"
-              fill="rgba(255,255,255,0.35)"
-              fontFamily="Orbitron, monospace"
-            >{s.label}</text>
+            <text key={i} x={xPos(i)} y={chartH} textAnchor="middle" fontSize="9" fill="rgba(255,255,255,0.35)" fontFamily="Orbitron, monospace">{s.label}</text>
           ))}
         </svg>
       </div>
@@ -351,6 +349,16 @@ function BeachScoreCard({ forecast }) {
           BEST HOUR · {bestWindow?.label}
         </div>
       )}
+      <div style={{ display: 'flex', gap: 16, marginTop: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <div style={{ width: 16, height: 2, background: scoreColor, borderRadius: 1 }} />
+          <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', fontFamily: 'Orbitron, monospace' }}>BEACH SCORE</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <div style={{ width: 16, height: 2, background: 'rgba(50,220,120,0.8)', borderRadius: 1, borderTop: '1px dashed rgba(50,220,120,0.8)' }} />
+          <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', fontFamily: 'Orbitron, monospace' }}>RAIN %÷10</span>
+        </div>
+      </div>
     </div>
   )
 }
@@ -706,7 +714,13 @@ function DayDetailView({ dayIndex, forecast, tides, onBack }) {
   const linePath = scores ? scores.map((s, i) => `${i === 0 ? 'M' : 'L'} ${xPos(i)} ${yPos(s.score)}`).join(' ') : ''
   const areaPath = scores ? `${linePath} L ${xPos(scores.length - 1)} ${padT + innerH} L ${xPos(0)} ${padT + innerH} Z` : ''
   const scoreColor = maxScore >= 8 ? '#00e5ff' : maxScore >= 6 ? '#ff6ec7' : maxScore >= 4 ? '#ffc800' : '#ff4444'
-
+const precipDataDetail = [9, 11, 13, 15].map(hour => {
+    const hi = dayIndex * 24 + hour
+    return forecast?.hourly?.precipitation_probability?.[hi] ?? null
+  })
+  const precipPathDetail = precipDataDetail.every(p => p != null)
+    ? precipDataDetail.map((p, i) => `${i === 0 ? 'M' : 'L'} ${xPos(i)} ${yPos(p / 10)}`).join(' ')
+    : null
   const sunrise = forecast?.daily?.sunrise?.[dayIndex]
   const sunset = forecast?.daily?.sunset?.[dayIndex]
   const goldenHour = sunset ? new Date(new Date(sunset).getTime() - 60 * 60 * 1000).toISOString() : null
@@ -772,7 +786,17 @@ function DayDetailView({ dayIndex, forecast, tides, onBack }) {
                     <stop offset="100%" stopColor={scoreColor} stopOpacity="0.02"/>
                   </linearGradient>
                 </defs>
-                <path d={areaPath} fill={`url(#areaGrad${dayIndex})`}/>
+              <path d={areaPath} fill={`url(#areaGrad${dayIndex})`}/>
+
+                {/* Reference lines */}
+                <line x1={padL} y1={yPos(10)} x2={chartW - padR} y2={yPos(10)} stroke="rgba(255,255,255,0.08)" strokeWidth="1" strokeDasharray="3 3"/>
+                <line x1={padL} y1={yPos(5)} x2={chartW - padR} y2={yPos(5)} stroke="rgba(255,255,255,0.08)" strokeWidth="1" strokeDasharray="3 3"/>
+                <text x={padL - 2} y={yPos(10) + 3} fontSize="7" fill="rgba(255,255,255,0.2)" textAnchor="end" fontFamily="Orbitron, monospace">10</text>
+                <text x={padL - 2} y={yPos(5) + 3} fontSize="7" fill="rgba(255,255,255,0.2)" textAnchor="end" fontFamily="Orbitron, monospace">5</text>
+
+                {precipPathDetail && (
+                  <path d={precipPathDetail} fill="none" stroke="rgba(50,220,120,0.8)" strokeWidth="1.5" strokeDasharray="4 3" strokeLinejoin="round" strokeLinecap="round"/>
+                )}
                 <path d={linePath} fill="none" stroke={scoreColor} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/>
                 {scores.map((s, i) => (
                   <circle key={i} cx={xPos(i)} cy={yPos(s.score)} r="3" fill={scoreColor}/>
@@ -791,6 +815,16 @@ function DayDetailView({ dayIndex, forecast, tides, onBack }) {
                 BEST HOUR · {bestWindow?.label}
               </div>
             )}
+            <div style={{ display: 'flex', gap: 16, marginTop: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <div style={{ width: 16, height: 2, background: scoreColor, borderRadius: 1 }} />
+                <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', fontFamily: 'Orbitron, monospace' }}>BEACH SCORE</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <div style={{ width: 16, height: 2, background: 'rgba(50,220,120,0.8)', borderRadius: 1 }} />
+                <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', fontFamily: 'Orbitron, monospace' }}>RAIN %÷10</span>
+              </div>
+            </div>
           </div>
         )}
 

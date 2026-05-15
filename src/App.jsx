@@ -1065,6 +1065,7 @@ function CrewTab() {
         const votes = vibeData?.votes || {}
         const points = RALLY_VIBE_POINTS[vibeKey] ?? 0
         const expiryMins = vibeKey === 'shots' ? SHOTS_EXPIRY_MINUTES : VIBE_EXPIRY_MINUTES
+        console.log('vibe check:', { vibeKey, points })
 
         for (const [, voteData] of Object.entries(votes)) {
           if (!voteData?.timestamp) continue

@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { db } from './firebase'
-import { ref, onValue, set, push, remove } from 'firebase/database'
+import { ref, onValue, set, push, remove, runTransaction } from 'firebase/database'
 import './App.css'
 
 const TRIP = {
@@ -1082,12 +1082,10 @@ function CrewTab() {
 
       console.log('tick:', { pointsPerMinute, hasActiveVotes })
 
-      import('firebase/database').then(({ runTransaction }) => {
-        runTransaction(rallyRef, current => {
-          const currentVal = current || 0
-          const newVal = currentVal + pointsPerMinute
-          return Math.min(100, Math.max(0, newVal))
-        })
+      runTransaction(rallyRef, current => {
+        const currentVal = current || 0
+        const newVal = currentVal + pointsPerMinute
+        return Math.min(100, Math.max(0, newVal))
       })
     }
 

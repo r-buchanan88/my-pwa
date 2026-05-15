@@ -21,7 +21,9 @@ const TRIP = {
     {
       name: 'Murder Mystery Party',
       emoji: '🔍',
-      links: [],
+      links: [
+        { label: 'View Invitation', url: '/murder-mystery.html' },
+      ],
     },
     {
       name: 'Fancy Dinner',

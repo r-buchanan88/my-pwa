@@ -674,6 +674,201 @@ function getMoonEmoji() {
   return MOON_PHASES[Math.floor(phase / cycle * MOON_PHASES.length)]
 }
 
+function DayDetailView({ dayIndex, forecast, tides, onBack }) {
+  const DAYS_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+  const date = forecast?.daily?.time?.[dayIndex]
+  const dayName = dayIndex === 0 ? 'Today' : DAYS_FULL[new Date(date + 'T12:00:00').getDay()]
+  const wx = WX_LABELS[forecast?.daily?.weathercode?.[dayIndex]]
+  const scores = getBeachScores(forecast, dayIndex)
+  const maxScore = scores ? Math.max(...scores.map(s => s.score)) : null
+  const bestWindow = scores ? scores.find(s => s.score === maxScore) : null
+
+  const WINDOW_THRESHOLD = 8.1
+  let bestPairStart = -1
+  let bestPairScore = -1
+  if (scores) {
+    for (let i = 0; i < scores.length - 1; i++) {
+      const bothQualify = scores[i].score >= WINDOW_THRESHOLD && scores[i + 1].score >= WINDOW_THRESHOLD
+      if (bothQualify) {
+        const avg = (scores[i].score + scores[i + 1].score) / 2
+        if (avg > bestPairScore) { bestPairScore = avg; bestPairStart = i }
+      }
+    }
+  }
+
+  const chartW = 260
+  const chartH = 80
+  const padL = 8, padR = 8, padT = 8, padB = 8
+  const innerW = chartW - padL - padR
+  const innerH = chartH - padT - padB
+  const xPos = (i) => padL + (i / (scores.length - 1)) * innerW
+  const yPos = (score) => padT + innerH - (score / 10) * innerH
+  const linePath = scores ? scores.map((s, i) => `${i === 0 ? 'M' : 'L'} ${xPos(i)} ${yPos(s.score)}`).join(' ') : ''
+  const areaPath = scores ? `${linePath} L ${xPos(scores.length - 1)} ${padT + innerH} L ${xPos(0)} ${padT + innerH} Z` : ''
+  const scoreColor = maxScore >= 8 ? '#00e5ff' : maxScore >= 6 ? '#ff6ec7' : maxScore >= 4 ? '#ffc800' : '#ff4444'
+
+  const sunrise = forecast?.daily?.sunrise?.[dayIndex]
+  const sunset = forecast?.daily?.sunset?.[dayIndex]
+  const goldenHour = sunset ? new Date(new Date(sunset).getTime() - 60 * 60 * 1000).toISOString() : null
+
+  const canShowTides = dayIndex <= 1
+  const todayTides = dayIndex === 0 ? tides?.today : tides?.tomorrow
+
+  return (
+    <div className="app">
+      <div style={{
+        background: 'linear-gradient(160deg, #0a0015 0%, #1a0533 60%, #2a0050 100%)',
+        padding: '48px 20px 20px',
+        position: 'relative',
+      }}>
+        <button
+          onClick={onBack}
+          style={{
+            position: 'absolute', top: 16, left: 16,
+            background: 'rgba(255,255,255,0.08)',
+            border: '1px solid rgba(255,110,199,0.3)',
+            borderRadius: 20, padding: '6px 14px',
+            color: '#ff6ec7', fontSize: 13, cursor: 'pointer',
+            fontFamily: 'Orbitron, monospace', letterSpacing: 1
+          }}
+        >← Back</button>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontFamily: 'Orbitron, monospace', fontSize: 10, letterSpacing: 3, color: '#ff6ec7', marginBottom: 8 }}>
+            {date}
+          </div>
+          <div style={{ fontFamily: 'Orbitron, monospace', fontSize: 28, fontWeight: 900, color: '#fff', marginBottom: 4 }}>
+            {dayName}
+          </div>
+          <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)' }}>
+            {wx?.emoji} {wx?.label}
+          </div>
+          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginTop: 4 }}>
+            {Math.round(forecast?.daily?.temperature_2m_max?.[dayIndex])}° / {Math.round(forecast?.daily?.temperature_2m_min?.[dayIndex])}°
+          </div>
+        </div>
+      </div>
+
+      <div className="cards" style={{ paddingTop: 16, paddingBottom: 80 }}>
+
+        {/* Beach Score */}
+        {scores && (
+          <div className="card">
+            <div className="card-label">🏖️ Beach Score</div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
+              <div style={{ fontSize: 36, fontWeight: 700, color: scoreColor, lineHeight: 1 }}>{maxScore}</div>
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>peak · {bestWindow?.label}</div>
+            </div>
+            <div style={{ margin: '12px 0 4px' }}>
+              <svg width="100%" viewBox={`0 0 ${chartW} ${chartH}`} style={{ overflow: 'visible' }}>
+                {bestPairStart >= 0 && (
+                  <>
+                    <rect x={xPos(bestPairStart)} y={padT} width={xPos(bestPairStart + 1) - xPos(bestPairStart)} height={innerH} fill="rgba(0,229,255,0.08)" rx="4"/>
+                    <rect x={xPos(bestPairStart)} y={padT} width={xPos(bestPairStart + 1) - xPos(bestPairStart)} height={innerH} fill="none" stroke="rgba(0,229,255,0.2)" strokeWidth="1" rx="4"/>
+                  </>
+                )}
+                <defs>
+                  <linearGradient id={`areaGrad${dayIndex}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={scoreColor} stopOpacity="0.3"/>
+                    <stop offset="100%" stopColor={scoreColor} stopOpacity="0.02"/>
+                  </linearGradient>
+                </defs>
+                <path d={areaPath} fill={`url(#areaGrad${dayIndex})`}/>
+                <path d={linePath} fill="none" stroke={scoreColor} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/>
+                {scores.map((s, i) => (
+                  <circle key={i} cx={xPos(i)} cy={yPos(s.score)} r="3" fill={scoreColor}/>
+                ))}
+                {scores.map((s, i) => (
+                  <text key={i} x={xPos(i)} y={chartH} textAnchor="middle" fontSize="9" fill="rgba(255,255,255,0.35)" fontFamily="Orbitron, monospace">{s.label}</text>
+                ))}
+              </svg>
+            </div>
+            {bestPairStart >= 0 ? (
+              <div style={{ fontSize: 10, color: 'rgba(0,229,255,0.5)', fontFamily: 'Orbitron, monospace', letterSpacing: 1 }}>
+                BEST WINDOW · {scores[bestPairStart].label}–{scores[bestPairStart + 1].label}
+              </div>
+            ) : (
+              <div style={{ fontSize: 10, color: 'rgba(255,110,199,0.5)', fontFamily: 'Orbitron, monospace', letterSpacing: 1 }}>
+                BEST HOUR · {bestWindow?.label}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Hourly breakdown */}
+        <div className="card">
+          <div className="card-label">Hourly Conditions · 9AM–6PM</div>
+          {[9, 10, 11, 12, 13, 14, 15, 16, 17, 18].map(hour => {
+            const hi = dayIndex * 24 + hour
+            const temp = forecast?.hourly?.temperature_2m?.[hi]
+            const precip = forecast?.hourly?.precipitation_probability?.[hi]
+            const wind = forecast?.hourly?.windspeed_10m?.[hi]
+            const score = temp != null && precip != null && wind != null
+              ? calcBeachScore(temp, precip, wind)
+              : null
+            const label = hour === 12 ? '12PM' : hour > 12 ? `${hour - 12}PM` : `${hour}AM`
+            const scoreColor2 = score >= 8 ? '#00e5ff' : score >= 6 ? '#ff6ec7' : score >= 4 ? '#ffc800' : '#ff4444'
+            return (
+              <div key={hour} className="tide-row">
+                <span style={{ fontFamily: 'Orbitron, monospace', fontSize: 10, color: '#ff6ec7', width: 36 }}>{label}</span>
+                <span style={{ flex: 1, fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>
+                  {temp != null ? `${Math.round(temp)}°` : '--'} · {precip != null ? `${precip}%` : '--'} rain · {wind != null ? `${Math.round(wind)}mph` : '--'}
+                </span>
+                <span style={{ fontSize: 13, color: score != null ? scoreColor2 : 'rgba(255,255,255,0.3)', fontFamily: 'Orbitron, monospace' }}>
+                  {score != null ? score : '--'}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Sun & Moon */}
+        <div className="card">
+          <div className="card-label">Sun & Moon</div>
+          <div className="sun-moon-grid">
+            <div className="sun-moon-item">
+              <div className="sun-moon-label">Sunrise</div>
+              <div className="sun-moon-value">{sunrise ? formatTime12(sunrise) : '--'}</div>
+            </div>
+            <div className="sun-moon-item">
+              <div className="sun-moon-label">Sunset</div>
+              <div className="sun-moon-value">{sunset ? formatTime12(sunset) : '--'}</div>
+            </div>
+            <div className="sun-moon-item">
+              <div className="sun-moon-label">Golden Hour</div>
+              <div className="sun-moon-value">{goldenHour ? formatTime12(goldenHour) : '--'}</div>
+            </div>
+            <div className="sun-moon-item">
+              <div className="sun-moon-label">Moon Phase</div>
+              <div className="sun-moon-value">{getMoonEmoji()}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Tides */}
+        <div className="card">
+          <div className="card-label">Tides · Wilmington Station</div>
+          {!canShowTides && (
+            <div className="card-sub">Unavailable past tomorrow</div>
+          )}
+          {canShowTides && !todayTides && (
+            <div className="loading">Loading...</div>
+          )}
+          {canShowTides && todayTides && todayTides.map((t, i) => (
+            <div className="tide-row" key={i}>
+              <span className={`tide-type ${t.type === 'H' ? 'high' : 'low'}`}>
+                {t.type === 'H' ? 'High' : 'Low'}
+              </span>
+              <span className="tide-time">{formatTideTime(t.t)}</span>
+              <span className="tide-height">{parseFloat(t.v).toFixed(1)} ft</span>
+            </div>
+          ))}
+        </div>
+
+      </div>
+    </div>
+  )
+}
+
 function WeatherTab() {
   const weather = useWeather()
   const marine = useMarine()
@@ -681,6 +876,11 @@ function WeatherTab() {
   const { data: forecast } = useForecast()
   const sunMoon = useMoonPhase()
   const ripRisk = useRipCurrent()
+  const [selectedDay, setSelectedDay] = useState(null)
+
+  if (selectedDay !== null) {
+    return <DayDetailView dayIndex={selectedDay} forecast={forecast} tides={tides} onBack={() => setSelectedDay(null)} />
+  }
 
   const now = new Date()
   const currentHour = now.getHours()
@@ -780,48 +980,53 @@ function WeatherTab() {
        <div className="card-label">7-Day Forecast</div>
        {!forecast && <div className="loading">Loading...</div>}
        {forecast?.daily && forecast.daily.time.map((date, i) => {
-          const wx = WX_LABELS[forecast.daily.weathercode[i]]
-          // Get hourly precip for this day (24 hours starting at index i*24)
-          const hourlyPrecip = forecast?.hourly?.precipitation_probability?.slice(i * 24, i * 24 + 24) || []
-          const amPrecip = hourlyPrecip.slice(6, 12)   // 6am-12pm
-          const pmPrecip = hourlyPrecip.slice(12, 18)  // 12pm-6pm
-          const evePrecip = hourlyPrecip.slice(18, 24) // 6pm-12am
-          const amMax = Math.max(...amPrecip, 0)
-          const pmMax = Math.max(...pmPrecip, 0)
-          const eveMax = Math.max(...evePrecip, 0)
-          const threshold = 30
-          const rainTimes = [
-            amMax >= threshold && 'AM',
-            pmMax >= threshold && 'PM',
-            eveMax >= threshold && 'Eve',
-          ].filter(Boolean)
+            const wx = WX_LABELS[forecast.daily.weathercode[i]]
+            const hourlyPrecip = forecast?.hourly?.precipitation_probability?.slice(i * 24, i * 24 + 24) || []
+            const amPrecip = hourlyPrecip.slice(6, 12)
+            const pmPrecip = hourlyPrecip.slice(12, 18)
+            const evePrecip = hourlyPrecip.slice(18, 24)
+            const amMax = Math.max(...amPrecip, 0)
+            const pmMax = Math.max(...pmPrecip, 0)
+            const eveMax = Math.max(...evePrecip, 0)
+            const threshold = 30
+            const rainTimes = [
+              amMax >= threshold && 'AM',
+              pmMax >= threshold && 'PM',
+              eveMax >= threshold && 'Eve',
+            ].filter(Boolean)
 
-          return (
-            <div className="forecast-row" key={date}>
-              <div className="forecast-day">{i === 0 ? 'Today' : DAYS[new Date(date + 'T12:00:00').getDay()]}</div>
-              <div className="forecast-desc">
-                <span style={{ marginRight: 4 }}>{wx?.emoji}</span>
-                {rainTimes.length > 0
-                  ? <span style={{ color: '#00e5ff', fontSize: 11 }}>Rain {rainTimes.join(' · ')}</span>
-                  : <span>{wx?.label ?? '—'}</span>
-                }
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                <div className="forecast-temps">
-                  {Math.round(forecast.daily.temperature_2m_max[i])}°
-                  <span className="low">{Math.round(forecast.daily.temperature_2m_min[i])}°</span>
+            return (
+              <div
+                className="forecast-row"
+                key={date}
+                onClick={() => setSelectedDay(i)}
+                style={{ cursor: 'pointer' }}
+              >
+                <div className="forecast-day">{i === 0 ? 'Today' : DAYS[new Date(date + 'T12:00:00').getDay()]}</div>
+                <div className="forecast-desc">
+                  <span style={{ marginRight: 4 }}>{wx?.emoji}</span>
+                  {rainTimes.length > 0
+                    ? <span style={{ color: '#00e5ff', fontSize: 11 }}>Rain {rainTimes.join(' · ')}</span>
+                    : <span>{wx?.label ?? '—'}</span>
+                  }
                 </div>
-                {(() => {
-                  const avg = getDailyAvgBeachScore(forecast, i)
-                  const color = avg >= 8 ? '#00e5ff' : avg >= 6 ? '#ff6ec7' : avg >= 4 ? '#ffc800' : '#ff4444'
-                  return avg != null
-                    ? <span style={{ fontSize: 10, color, fontFamily: 'Orbitron, monospace' }}>Avg Score: {avg}</span>
-                    : null
-                })()}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                  <div className="forecast-temps">
+                    {Math.round(forecast.daily.temperature_2m_max[i])}°
+                    <span className="low">{Math.round(forecast.daily.temperature_2m_min[i])}°</span>
+                  </div>
+                  {(() => {
+                    const avg = getDailyAvgBeachScore(forecast, i)
+                    const color = avg >= 8 ? '#00e5ff' : avg >= 6 ? '#ff6ec7' : avg >= 4 ? '#ffc800' : '#ff4444'
+                    return avg != null
+                      ? <span style={{ fontSize: 10, color, fontFamily: 'Orbitron, monospace' }}>Avg Score: {avg}</span>
+                      : null
+                  })()}
+                </div>
+                <span style={{ fontSize: 12, color: 'rgba(255,110,199,0.4)', marginLeft: 6 }}>›</span>
               </div>
-            </div>
-          )
-        })}
+            )
+          })}
       </div>
 
       {/* TIDES */}

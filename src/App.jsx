@@ -1556,7 +1556,7 @@ function ExploreTab() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
                   <div style={{ fontSize: 14, color: '#fff', fontWeight: 600, marginBottom: 2 }}>{r.name}</div>
-                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{r.type}</div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{r.type} · {r.distance}</div>
                 </div>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                   <span style={{ fontSize: 11, color: '#ff6ec7' }}>⭐ {r.rating}</span>

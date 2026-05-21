@@ -1594,7 +1594,7 @@ function ExploreTab() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div>
                 <div style={{ fontSize: 14, color: '#fff', fontWeight: 600, marginBottom: 2 }}>{s.name}</div>
-                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{s.type} · {s.address}</div>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{s.type}</div>
               </div>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 <a href={s.maps} target="_blank" rel="noreferrer" style={{ fontSize: 16, textDecoration: 'none' }}>📍</a>

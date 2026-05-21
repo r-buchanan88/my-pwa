@@ -1508,39 +1508,37 @@ function CrewTab() {
 }
 
 const RESTAURANTS = [
-  { name: 'Splash by the Sea', type: 'Seafood & American', area: 'On Island', rating: 4.5, phone: '910-328-3044', maps: 'https://maps.apple.com/?q=Splash+by+the+Sea+North+Topsail+Beach+NC' },
-  { name: 'Seaview Pier Restaurant', type: 'Seafood', area: 'On Island', rating: 4.4, phone: '910-328-3172', maps: 'https://maps.apple.com/?q=Seaview+Pier+Restaurant+North+Topsail+Beach+NC' },
-  { name: 'Aarrr Pirate Bar & Grill', type: 'Bar & Grill', area: 'On Island', rating: 4.3, phone: '910-541-0619', maps: 'https://maps.apple.com/?q=Aarrr+Pirate+Bar+Grill+North+Topsail+Beach+NC' },
-  { name: 'Tiki Bar at North End Market', type: 'Bar', area: 'On Island', rating: 4.5, phone: null, maps: 'https://maps.apple.com/?q=Tiki+Bar+North+End+Market+North+Topsail+Beach+NC' },
-  { name: 'Riverview Cafe', type: 'Seafood', area: 'Sneads Ferry', rating: 4.6, phone: '910-327-2011', maps: 'https://maps.apple.com/?q=Riverview+Cafe+Sneads+Ferry+NC' },
-  { name: 'Spiaggia Ristobar', type: 'Italian', area: 'Sneads Ferry', rating: 4.6, phone: '910-741-0179', maps: 'https://maps.apple.com/?q=Spiaggia+Ristobar+Sneads+Ferry+NC' },
-  { name: 'Lo-re-Lei Pub & Grill', type: 'Bar & Grill', area: 'Sneads Ferry', rating: 4.4, phone: '910-327-0900', maps: 'https://maps.apple.com/?q=Lo-re-Lei+Pub+Grill+Sneads+Ferry+NC' },
-  { name: 'Voodoo Brewing Co', type: 'Brewery', area: 'Sneads Ferry', rating: 4.5, phone: '910-741-0155', maps: 'https://maps.apple.com/?q=Voodoo+Brewing+Sneads+Ferry+NC' },
-  { name: 'Shaka Taco 🤙', type: 'Tacos', area: 'Surf City', rating: 4.7, phone: '910-616-3118', maps: 'https://maps.apple.com/?q=Shaka+Taco+Surf+City+NC' },
-  { name: 'Low Tide Steakhouse & SandBar', type: 'Steak & Seafood', area: 'Surf City', rating: 4.5, phone: '910-803-2304', maps: 'https://maps.apple.com/?q=Low+Tide+Steakhouse+Surf+City+NC' },
-  { name: "Daddy Mac's Beach Grille", type: 'Seafood & American', area: 'Surf City', rating: 4.3, phone: '910-328-5577', maps: 'https://maps.apple.com/?q=Daddy+Macs+Beach+Grille+Surf+City+NC' },
-  { name: 'Sears Landing', type: 'Seafood', area: 'Surf City', rating: 4.3, phone: '910-328-1312', maps: 'https://maps.apple.com/?q=Sears+Landing+Surf+City+NC' },
-  { name: 'Wildfire Pizza', type: 'Pizza', area: 'Surf City', rating: 4.2, phone: '910-541-0232', maps: 'https://maps.apple.com/?q=Wildfire+Pizza+Surf+City+NC' },
+  { name: 'Splash by the Sea', type: 'Seafood & American', area: 'On Island', rating: 4.5, distance: '0.8 mi', phone: '910-328-3044', maps: 'https://maps.apple.com/?q=Splash+by+the+Sea+North+Topsail+Beach+NC' },
+  { name: 'Seaview Pier Restaurant', type: 'Seafood', area: 'On Island', rating: 4.4, distance: '0.5 mi', phone: '910-328-3172', maps: 'https://maps.apple.com/?q=Seaview+Pier+Restaurant+North+Topsail+Beach+NC' },
+  { name: 'Aarrr Pirate Bar & Grill', type: 'Bar & Grill', area: 'On Island', rating: 4.3, distance: '2.0 mi', phone: '910-541-0619', maps: 'https://maps.apple.com/?q=Aarrr+Pirate+Bar+Grill+North+Topsail+Beach+NC' },
+  { name: 'Tiki Bar at North End Market', type: 'Bar', area: 'On Island', rating: 4.5, distance: '2.4 mi', phone: null, maps: 'https://maps.apple.com/?q=Tiki+Bar+North+End+Market+North+Topsail+Beach+NC' },
+  { name: 'Riverview Cafe', type: 'Seafood', area: 'Sneads Ferry', rating: 4.6, distance: '3.8 mi', phone: '910-327-2011', maps: 'https://maps.apple.com/?q=Riverview+Cafe+Sneads+Ferry+NC' },
+  { name: 'Spiaggia Ristobar', type: 'Italian', area: 'Sneads Ferry', rating: 4.6, distance: '3.5 mi', phone: '910-741-0179', maps: 'https://maps.apple.com/?q=Spiaggia+Ristobar+Sneads+Ferry+NC' },
+  { name: 'Lo-re-Lei Pub & Grill', type: 'Bar & Grill', area: 'Sneads Ferry', rating: 4.4, distance: '2.8 mi', phone: '910-327-0900', maps: 'https://maps.apple.com/?q=Lo-re-Lei+Pub+Grill+Sneads+Ferry+NC' },
+  { name: 'Voodoo Brewing Co', type: 'Brewery', area: 'Sneads Ferry', rating: 4.5, distance: '2.7 mi', phone: '910-741-0155', maps: 'https://maps.apple.com/?q=Voodoo+Brewing+Sneads+Ferry+NC' },
+  { name: 'Low Tide Steakhouse & SandBar', type: 'Steak & Seafood', area: 'Surf City', rating: 4.5, distance: '10.7 mi', phone: '910-803-2304', maps: 'https://maps.apple.com/?q=Low+Tide+Steakhouse+Surf+City+NC' },
+  { name: "Daddy Mac's Beach Grille", type: 'Seafood & American', area: 'Surf City', rating: 4.3, distance: '10.5 mi', phone: '910-328-5577', maps: 'https://maps.apple.com/?q=Daddy+Macs+Beach+Grille+Surf+City+NC' },
+  { name: 'Sears Landing', type: 'Seafood', area: 'Surf City', rating: 4.3, distance: '10.5 mi', phone: '910-328-1312', maps: 'https://maps.apple.com/?q=Sears+Landing+Surf+City+NC' },
+  { name: 'Wildfire Pizza', type: 'Pizza', area: 'Surf City', rating: 4.2, distance: '10.5 mi', phone: '910-541-0232', maps: 'https://maps.apple.com/?q=Wildfire+Pizza+Surf+City+NC' },
+  { name: 'Shaka Taco', type: 'Tacos', area: 'Surf City', rating: 4.7, distance: '10.4 mi', phone: '910-616-3118', maps: 'https://maps.apple.com/?q=Shaka+Taco+Surf+City+NC' },
 ]
 
 const STORES = [
-  { name: 'Food Lion', type: 'Grocery', address: '965 Old Folkstone Rd, Sneads Ferry', phone: null, maps: 'https://maps.apple.com/?address=965+Old+Folkstone+Rd,+Sneads+Ferry,+NC+28460' },
-  { name: 'ABC Store', type: 'Liquor', address: '987 NC-210, Sneads Ferry', phone: null, maps: 'https://maps.apple.com/?address=987+NC-210,+Sneads+Ferry,+NC+28460' },
-  { name: 'Publix', type: 'Grocery', address: '2765 NC-210, Hampstead', phone: null, maps: 'https://maps.apple.com/?address=2765+NC-210,+Hampstead,+NC+28443' },
+  { name: 'Food Lion', type: 'Grocery · 1.3 mi', address: '965 Old Folkstone Rd, Sneads Ferry', phone: null, maps: 'https://maps.apple.com/?address=965+Old+Folkstone+Rd,+Sneads+Ferry,+NC+28460' },
+  { name: 'ABC Store', type: 'Liquor · 1.3 mi', address: '987 NC-210, Sneads Ferry', phone: null, maps: 'https://maps.apple.com/?address=987+NC-210,+Sneads+Ferry,+NC+28460' },
+  { name: 'Publix', type: 'Grocery · 12.8 mi', address: '2765 NC-210, Hampstead', phone: null, maps: 'https://maps.apple.com/?address=2765+NC-210,+Hampstead,+NC+28443' },
 ]
 
 const COFFEE = [
-  { name: 'Coffee Joy', type: 'Coffee · On Island', address: '2000 New River Inlet Rd, North Topsail Beach', phone: '480-202-0995', maps: 'https://maps.apple.com/?q=Coffee+Joy+North+Topsail+Beach+NC' },
-  { name: 'Topsail Treats', type: 'Ice Cream & Coffee · On Island', address: '2000 New River Inlet Rd, North Topsail Beach', phone: '407-967-1053', maps: 'https://maps.apple.com/?q=Topsail+Treats+North+Topsail+Beach+NC' },
-  { name: 'The Last Mango', type: 'Italian Ice · On Island', address: '4021 Island Dr, North Topsail Beach', phone: '910-859-0151', maps: 'https://maps.apple.com/?q=The+Last+Mango+North+Topsail+Beach+NC' },
-  { name: 'Daybreak Donuts', type: 'Donuts · Surf City', address: '303 S Topsail Dr, Surf City', phone: '910-541-0133', maps: 'https://maps.apple.com/?q=Daybreak+Donuts+Surf+City+NC' },
-  { name: 'Daily Grind', type: 'Coffee & Ice Cream · Surf City', address: '114 N Topsail Dr, Surf City', phone: '910-541-0471', maps: 'https://maps.apple.com/?q=Daily+Grind+Surf+City+NC' },
-  { name: 'Diver Surfside Cafe', type: 'Coffee · Surf City', address: '809 Roland Ave, Surf City', phone: '910-928-8006', maps: 'https://maps.apple.com/?q=Diver+Surfside+Cafe+Surf+City+NC' },
-  { name: 'Sundial Coffee & Tea', type: 'Coffee · Surf City', address: '104 Charlie Medlin Dr, Surf City', phone: '910-803-1133', maps: 'https://maps.apple.com/?q=Sundial+Coffee+Tea+Surf+City+NC' },
-  { name: 'Sugar Island', type: 'Coffee & Books · Surf City', address: '206 N Topsail Dr, Surf City', phone: '910-254-1110', maps: 'https://maps.apple.com/?q=Sugar+Island+Surf+City+NC' },
-  { name: 'Sweet Alicious', type: 'Ice Cream · Surf City', address: '14260 NC-50, Surf City', phone: '843-455-1747', maps: 'https://maps.apple.com/?q=Sweet+Alicious+Surf+City+NC' },
-  { name: 'Scoops Microcreamery', type: 'Ice Cream · Sneads Ferry', address: '1314 NC-210, Sneads Ferry', phone: '910-541-4822', maps: 'https://maps.apple.com/?q=Scoops+Microcreamery+Sneads+Ferry+NC' },
-  { name: 'Four Cousins Ice Cream', type: 'Ice Cream · Topsail Beach', address: '718 S Anderson Blvd, Topsail Beach', phone: '910-928-8010', maps: 'https://maps.apple.com/?q=Four+Cousins+Ice+Cream+Topsail+Beach+NC' },
+  { name: 'Coffee Joy', type: 'Coffee · On Island · 2.0 mi', address: '2000 New River Inlet Rd, North Topsail Beach', phone: '480-202-0995', maps: 'https://maps.apple.com/?q=Coffee+Joy+North+Topsail+Beach+NC', note: 'Closed Tue' },
+  { name: 'Topsail Treats', type: 'Ice Cream & Coffee · On Island · 2.0 mi', address: '2000 New River Inlet Rd, North Topsail Beach', phone: '407-967-1053', maps: 'https://maps.apple.com/?q=Topsail+Treats+North+Topsail+Beach+NC', note: 'Closed Tue' },
+  { name: 'The Last Mango', type: 'Italian Ice · On Island · 3.8 mi', address: '4021 Island Dr, North Topsail Beach', phone: '910-859-0151', maps: 'https://maps.apple.com/?q=The+Last+Mango+North+Topsail+Beach+NC', note: 'Sat & Sun only' },
+  { name: 'Scoops Microcreamery', type: 'Ice Cream · Sneads Ferry · 2.9 mi', address: '1314 NC-210, Sneads Ferry', phone: '910-541-4822', maps: 'https://maps.apple.com/?q=Scoops+Microcreamery+Sneads+Ferry+NC', note: 'Opens 1PM daily' },
+  { name: 'Daybreak Donuts', type: 'Donuts · Surf City · 10.7 mi', address: '303 S Topsail Dr, Surf City', phone: '910-541-0133', maps: 'https://maps.apple.com/?q=Daybreak+Donuts+Surf+City+NC' },
+  { name: 'Daily Grind', type: 'Coffee & Ice Cream · Surf City · 10.5 mi', address: '114 N Topsail Dr, Surf City', phone: '910-541-0471', maps: 'https://maps.apple.com/?q=Daily+Grind+Surf+City+NC' },
+  { name: 'Diver Surfside Cafe', type: 'Coffee · Surf City · 10.6 mi', address: '809 Roland Ave, Surf City', phone: '910-928-8006', maps: 'https://maps.apple.com/?q=Diver+Surfside+Cafe+Surf+City+NC' },
+  { name: 'Sundial Coffee & Tea', type: 'Coffee · Surf City · 10.7 mi', address: '104 Charlie Medlin Dr, Surf City', phone: '910-803-1133', maps: 'https://maps.apple.com/?q=Sundial+Coffee+Tea+Surf+City+NC' },
+  { name: 'Sugar Island', type: 'Coffee & Books · Surf City · 10.3 mi', address: '206 N Topsail Dr, Surf City', phone: '910-254-1110', maps: 'https://maps.apple.com/?q=Sugar+Island+Surf+City+NC', note: 'Wed–Sat only' },
 ]
 const AREAS = ['On Island', 'Sneads Ferry', 'Surf City']
 
@@ -1579,7 +1577,8 @@ function ExploreTab() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div>
                 <div style={{ fontSize: 14, color: '#fff', fontWeight: 600, marginBottom: 2 }}>{s.name}</div>
-                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{s.type} · {s.address}</div>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{s.type}</div>
+                {s.note && <div style={{ fontSize: 11, color: '#ffc800' }}>{s.note}</div>}
               </div>
               <a href={s.maps} target="_blank" rel="noreferrer" style={{ fontSize: 16, textDecoration: 'none' }}>📍</a>
             </div>

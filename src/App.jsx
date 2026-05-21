@@ -1529,6 +1529,19 @@ const STORES = [
   { name: 'Publix', type: 'Grocery', address: '2765 NC-210, Hampstead', phone: null, maps: 'https://maps.apple.com/?address=2765+NC-210,+Hampstead,+NC+28443' },
 ]
 
+const COFFEE = [
+  { name: 'Coffee Joy', type: 'Coffee · On Island', address: '2000 New River Inlet Rd, North Topsail Beach', phone: '480-202-0995', maps: 'https://maps.apple.com/?q=Coffee+Joy+North+Topsail+Beach+NC' },
+  { name: 'Topsail Treats', type: 'Ice Cream & Coffee · On Island', address: '2000 New River Inlet Rd, North Topsail Beach', phone: '407-967-1053', maps: 'https://maps.apple.com/?q=Topsail+Treats+North+Topsail+Beach+NC' },
+  { name: 'The Last Mango', type: 'Italian Ice · On Island', address: '4021 Island Dr, North Topsail Beach', phone: '910-859-0151', maps: 'https://maps.apple.com/?q=The+Last+Mango+North+Topsail+Beach+NC' },
+  { name: 'Daybreak Donuts', type: 'Donuts · Surf City', address: '303 S Topsail Dr, Surf City', phone: '910-541-0133', maps: 'https://maps.apple.com/?q=Daybreak+Donuts+Surf+City+NC' },
+  { name: 'Daily Grind', type: 'Coffee & Ice Cream · Surf City', address: '114 N Topsail Dr, Surf City', phone: '910-541-0471', maps: 'https://maps.apple.com/?q=Daily+Grind+Surf+City+NC' },
+  { name: 'Diver Surfside Cafe', type: 'Coffee · Surf City', address: '809 Roland Ave, Surf City', phone: '910-928-8006', maps: 'https://maps.apple.com/?q=Diver+Surfside+Cafe+Surf+City+NC' },
+  { name: 'Sundial Coffee & Tea', type: 'Coffee · Surf City', address: '104 Charlie Medlin Dr, Surf City', phone: '910-803-1133', maps: 'https://maps.apple.com/?q=Sundial+Coffee+Tea+Surf+City+NC' },
+  { name: 'Sugar Island', type: 'Coffee & Books · Surf City', address: '206 N Topsail Dr, Surf City', phone: '910-254-1110', maps: 'https://maps.apple.com/?q=Sugar+Island+Surf+City+NC' },
+  { name: 'Sweet Alicious', type: 'Ice Cream · Surf City', address: '14260 NC-50, Surf City', phone: '843-455-1747', maps: 'https://maps.apple.com/?q=Sweet+Alicious+Surf+City+NC' },
+  { name: 'Scoops Microcreamery', type: 'Ice Cream · Sneads Ferry', address: '1314 NC-210, Sneads Ferry', phone: '910-541-4822', maps: 'https://maps.apple.com/?q=Scoops+Microcreamery+Sneads+Ferry+NC' },
+  { name: 'Four Cousins Ice Cream', type: 'Ice Cream · Topsail Beach', address: '718 S Anderson Blvd, Topsail Beach', phone: '910-928-8010', maps: 'https://maps.apple.com/?q=Four+Cousins+Ice+Cream+Topsail+Beach+NC' },
+]
 const AREAS = ['On Island', 'Sneads Ferry', 'Surf City']
 
 function ExploreTab() {
@@ -1558,7 +1571,7 @@ function ExploreTab() {
         </div>
       ))}
 
-      {/* STORES */}
+     {/* STORES */}
       <div className="card">
         <div className="card-label">🛒 Stores</div>
         {STORES.map((s, i) => (
@@ -1569,6 +1582,25 @@ function ExploreTab() {
                 <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{s.type} · {s.address}</div>
               </div>
               <a href={s.maps} target="_blank" rel="noreferrer" style={{ fontSize: 16, textDecoration: 'none' }}>📍</a>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* COFFEE & TREATS */}
+      <div className="card">
+        <div className="card-label">☕ Coffee & Treats</div>
+        {COFFEE.map((s, i) => (
+          <div key={i} style={{ paddingBottom: 12, marginBottom: 12, borderBottom: i < COFFEE.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <div style={{ fontSize: 14, color: '#fff', fontWeight: 600, marginBottom: 2 }}>{s.name}</div>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{s.type} · {s.address}</div>
+              </div>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <a href={s.maps} target="_blank" rel="noreferrer" style={{ fontSize: 16, textDecoration: 'none' }}>📍</a>
+                {s.phone && <a href={`tel:${s.phone}`} style={{ fontSize: 16, textDecoration: 'none' }}>📞</a>}
+              </div>
             </div>
           </div>
         ))}

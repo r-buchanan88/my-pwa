@@ -2075,12 +2075,18 @@ function GamesTab() {
               ))}
             </div>
           ))}
-          {tournamentWinner && (
+          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+            {tournamentWinner && (
+              <button onClick={endTournament} style={{
+                background: 'none', border: 'none', color: 'rgba(0,229,255,0.3)',
+                fontSize: 10, cursor: 'pointer', fontFamily: 'Orbitron, monospace', letterSpacing: 1
+              }}>END TOURNAMENT</button>
+            )}
             <button onClick={endTournament} style={{
               background: 'none', border: 'none', color: 'rgba(255,110,199,0.3)',
-              fontSize: 10, cursor: 'pointer', fontFamily: 'Orbitron, monospace', letterSpacing: 1, marginTop: 8
-            }}>END TOURNAMENT</button>
-          )}
+              fontSize: 10, cursor: 'pointer', fontFamily: 'Orbitron, monospace', letterSpacing: 1
+            }}>RESET BRACKET</button>
+          </div>
         </div>
       )}
 
